@@ -1,21 +1,20 @@
 import { clipboard, Notification } from 'electron'
-import { execFile, exec } from 'child_process'
+import { exec } from 'child_process'
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
-import winScreenCapturePath from '../../../resources/lib/win/ScreenCapture.exe?asset'
-
-console.log('winScreenCapturePath', winScreenCapturePath)
+import { ScreenCapture } from './native'
 
 // 截图方法windows
 export const screenWindow = (cb: (image: string) => void): void => {
-  const screen_window = execFile(winScreenCapturePath)
-  screen_window.on('exit', (code) => {
-    if (code) {
+  ScreenCapture.start((result) => {
+    if (result.success) {
       const image = clipboard.readImage()
       cb && cb(image.isEmpty() ? '' : image.toDataURL())
+    } else {
+      cb && cb('')
     }
-  });
+  })
 }
 
 // 截图方法mac
