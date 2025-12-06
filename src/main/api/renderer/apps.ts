@@ -8,6 +8,8 @@ import { app } from 'electron'
 import { scanApplications } from '../../core/appScanner'
 import { launchApp } from '../../core/appLauncher'
 import databaseAPI from '../shared/database'
+import { pluginFeatureAPI } from '../plugin/feature'
+import { normalizeIconPath } from '../../common/iconUtils'
 
 const execAsync = promisify(exec)
 
@@ -36,6 +38,20 @@ export class AppsAPI {
     ipcMain.handle('get-apps', () => this.getApps())
     ipcMain.handle('launch', (_event, options: any) => this.launch(options))
     ipcMain.handle('refresh-apps-cache', () => this.refreshAppsCache())
+
+    // 历史记录管理
+    ipcMain.handle('remove-from-history', (_event, appPath: string, featureCode?: string) =>
+      this.removeFromHistory(appPath, featureCode)
+    )
+
+    // 固定应用管理
+    ipcMain.handle('pin-app', (_event, app: any) => this.pinApp(app))
+    ipcMain.handle('unpin-app', (_event, appPath: string, featureCode?: string) =>
+      this.unpinApp(appPath, featureCode)
+    )
+    ipcMain.handle('update-pinned-order', (_event, newOrder: any[]) =>
+      this.updatePinnedOrder(newOrder)
+    )
   }
 
   /**
@@ -179,8 +195,9 @@ export class AppsAPI {
     featureCode?: string
     param?: any
     name?: string // cmd 名称（用于历史记录显示）
+    cmdType?: string // cmd 类型（用于判断是否添加历史记录）
   }): Promise<any> {
-    const { path, type, param, name } = options
+    const { path, type, param, name, cmdType } = options
     let { featureCode } = options
     this.launchParam = param || {}
 
@@ -203,7 +220,7 @@ export class AppsAPI {
         console.log('启动插件:', { path, featureCode, name })
 
         // 添加到历史记录
-        await this.addToHistory({ path, type, featureCode, param, name })
+        await this.addToHistory({ path, type, featureCode, param, name, cmdType })
 
         // 通知渲染进程准备显示插件占位区域
         this.mainWindow?.webContents.send('show-plugin-placeholder')
@@ -240,9 +257,17 @@ export class AppsAPI {
     featureCode?: string
     param?: any
     name?: string // cmd 名称（用于历史记录显示）
+    cmdType?: string // cmd 类型（用于判断是否添加历史记录）
   }): Promise<void> {
     try {
-      const { path: appPath, type = 'app', featureCode, name: cmdName } = options
+      const { path: appPath, type = 'app', featureCode, name: cmdName, cmdType } = options
+
+      // 如果是匹配类型的命令（regex 或 over），不添加到历史记录
+      if (cmdType === 'regex' || cmdType === 'over') {
+        console.log('匹配类型的命令不添加到历史记录:', cmdName)
+        return
+      }
+
       const now = Date.now()
 
       // 获取应用/插件信息
@@ -261,13 +286,27 @@ export class AppsAPI {
           try {
             const pluginConfig = JSON.parse(await fs.readFile(pluginJsonPath, 'utf-8'))
 
-            // 查找对应的 feature
-            const feature = pluginConfig.features?.find((f: any) => f.code === featureCode)
+            // 查找对应的 feature（从 plugin.json）
+            let feature = pluginConfig.features?.find((f: any) => f.code === featureCode)
+
+            // 如果在 plugin.json 中没找到，尝试从动态 features 中查找
+            if (!feature) {
+              const dynamicFeatures = pluginFeatureAPI.loadDynamicFeatures(pluginConfig.name)
+              feature = dynamicFeatures.find((f: any) => f.code === featureCode)
+            }
+
+            // 优先使用 feature 的 icon，如果没有则使用 plugin 的 logo
+            let featureIcon = feature?.icon || plugin.logo || ''
+
+            // 标准化 icon 路径（处理相对路径、base64、http等）
+            if (featureIcon) {
+              featureIcon = normalizeIconPath(featureIcon, appPath)
+            }
 
             appInfo = {
               name: cmdName || pluginConfig.name, // 优先使用传入的 cmd 名称
               path: appPath,
-              icon: plugin.logo || '',
+              icon: featureIcon,
               type: 'plugin',
               featureCode: featureCode,
               pluginExplain: feature?.explain || ''
@@ -409,6 +448,128 @@ export class AppsAPI {
         success: false,
         error: '读取插件配置失败'
       }
+    }
+  }
+
+  /**
+   * 从历史记录中删除
+   */
+  private async removeFromHistory(appPath: string, featureCode?: string): Promise<void> {
+    try {
+      const originalHistory: any[] = (await databaseAPI.dbGet('app-history')) || []
+
+      // 过滤掉要删除的项
+      const history = originalHistory.filter((item) => {
+        // 对于插件，需要同时匹配 path 和 featureCode
+        if (item.type === 'plugin' && featureCode !== undefined) {
+          return !(item.path === appPath && item.featureCode === featureCode)
+        }
+        return item.path !== appPath
+      })
+
+      await databaseAPI.dbPut('app-history', history)
+      console.log('已从历史记录删除:', appPath, featureCode)
+
+      // 通知前端重新加载历史记录
+      this.mainWindow?.webContents.send('history-changed')
+    } catch (error) {
+      console.error('从历史记录删除失败:', error)
+    }
+  }
+
+  /**
+   * 固定应用
+   */
+  private async pinApp(app: any): Promise<void> {
+    try {
+      const pinnedApps: any[] = (await databaseAPI.dbGet('pinned-apps')) || []
+
+      // 检查是否已固定
+      const exists = pinnedApps.some((item) => {
+        // 对于插件，需要同时匹配 path 和 featureCode
+        if (item.type === 'plugin' && app.featureCode !== undefined) {
+          return item.path === app.path && item.featureCode === app.featureCode
+        }
+        return item.path === app.path
+      })
+
+      if (exists) {
+        console.log('应用已固定:', app.path)
+        return
+      }
+
+      // 添加到固定列表
+      pinnedApps.push({
+        name: app.name,
+        path: app.path,
+        icon: app.icon,
+        type: app.type,
+        featureCode: app.featureCode,
+        pluginExplain: app.pluginExplain,
+        pinyin: app.pinyin,
+        pinyinAbbr: app.pinyinAbbr
+      })
+
+      await databaseAPI.dbPut('pinned-apps', pinnedApps)
+      console.log('已固定应用:', app.name)
+
+      // 通知前端重新加载固定列表
+      this.mainWindow?.webContents.send('pinned-changed')
+    } catch (error) {
+      console.error('固定应用失败:', error)
+    }
+  }
+
+  /**
+   * 取消固定
+   */
+  private async unpinApp(appPath: string, featureCode?: string): Promise<void> {
+    try {
+      const originalPinnedApps: any[] = (await databaseAPI.dbGet('pinned-apps')) || []
+
+      // 过滤掉要删除的项
+      const pinnedApps = originalPinnedApps.filter((item) => {
+        // 对于插件，需要同时匹配 path 和 featureCode
+        if (item.type === 'plugin' && featureCode !== undefined) {
+          return !(item.path === appPath && item.featureCode === featureCode)
+        }
+        return item.path !== appPath
+      })
+
+      await databaseAPI.dbPut('pinned-apps', pinnedApps)
+      console.log('已取消固定:', appPath, featureCode)
+
+      // 通知前端重新加载固定列表
+      this.mainWindow?.webContents.send('pinned-changed')
+    } catch (error) {
+      console.error('取消固定失败:', error)
+    }
+  }
+
+  /**
+   * 更新固定列表顺序
+   */
+  private async updatePinnedOrder(newOrder: any[]): Promise<void> {
+    try {
+      // 清理数据，只保存必要字段
+      const cleanData = newOrder.map((app) => ({
+        name: app.name,
+        path: app.path,
+        icon: app.icon,
+        type: app.type,
+        featureCode: app.featureCode,
+        pluginExplain: app.pluginExplain,
+        pinyin: app.pinyin,
+        pinyinAbbr: app.pinyinAbbr
+      }))
+
+      await databaseAPI.dbPut('pinned-apps', cleanData)
+      console.log('固定列表顺序已更新')
+
+      // 通知前端重新加载固定列表
+      this.mainWindow?.webContents.send('pinned-changed')
+    } catch (error) {
+      console.error('更新固定列表顺序失败:', error)
     }
   }
 }

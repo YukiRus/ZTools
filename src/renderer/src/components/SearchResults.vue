@@ -404,6 +404,7 @@ async function handleSelectApp(app: any): Promise<void> {
       type: app.type || 'app',
       featureCode: app.featureCode,
       name: app.name, // 传递 cmd 名称用于历史记录显示
+      cmdType: app.cmdType || 'text', // 传递 cmdType 用于判断是否添加历史
       param: {
         payload: props.searchQuery,
         type: app.cmdType || 'text' // 传递 cmdType，默认为 text

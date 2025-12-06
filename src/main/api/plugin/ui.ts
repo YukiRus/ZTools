@@ -23,6 +23,10 @@ export class PluginUIAPI {
     // 子输入框相关
     ipcMain.handle('set-sub-input', (_event, placeholder?: string) => this.setSubInput(placeholder))
     ipcMain.on('notify-sub-input-change', (_event, text: string) => this.notifySubInputChange(text))
+    ipcMain.handle('set-sub-input-value', (_event, text: string) => this.setSubInputValue(text))
+    ipcMain.on('sub-input-focus', (event) => {
+      event.returnValue = this.subInputFocus()
+    })
 
     // 隐藏插件
     ipcMain.on('hide-plugin', () => this.hidePlugin())
@@ -83,6 +87,34 @@ export class PluginUIAPI {
   private notifySubInputChange(text: string): void {
     if (this.pluginManager) {
       this.pluginManager.sendPluginMessage('sub-input-change', { text })
+    }
+  }
+
+  private setSubInputValue(text: string): boolean {
+    try {
+      // 发送事件到主窗口渲染进程，设置输入框的值
+      this.mainWindow?.webContents.send('set-sub-input-value', text)
+      console.log('设置子输入框值:', text)
+      return true
+    } catch (error: any) {
+      console.error('设置子输入框值失败:', error)
+      return false
+    }
+  }
+
+  private subInputFocus(): boolean {
+    try {
+      this.mainWindow?.webContents.focus()
+      console.log('主窗口获取焦点', this.mainWindow)
+
+      // 发送事件到主窗口渲染进程，聚焦输入框
+      this.mainWindow?.webContents.send('focus-sub-input')
+      console.log('请求聚焦子输入框')
+
+      return true
+    } catch (error: any) {
+      console.error('聚焦子输入框失败:', error)
+      return false
     }
   }
 

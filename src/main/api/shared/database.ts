@@ -330,7 +330,7 @@ export class DatabaseAPI {
 
     // ============ 主程序渲染进程专用API（直接操作 ZTOOLS 命名空间） ============
     ipcMain.handle('ztools:db-put', async (_event, key: string, data: any) => {
-      console.log('ztools:db-put', key, data)
+      // console.log('ztools:db-put', key, data)
       return await this.dbPut(key, data)
     })
 

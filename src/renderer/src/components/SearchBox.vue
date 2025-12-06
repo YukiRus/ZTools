@@ -113,7 +113,7 @@ function updateInputWidth(): void {
     if (measureRef.value) {
       const width = measureRef.value.offsetWidth
       // 使用原生设置宽度
-      inputRef.value!.style.width = `${width + 20}px`
+      inputRef.value!.style.width = `${width}px`
       console.log('inputWidth.value', width)
     }
   })
@@ -122,6 +122,15 @@ function updateInputWidth(): void {
 // 监听 modelValue 变化
 watch(
   () => props.modelValue,
+  () => {
+    measureRef.value!.textContent = props.modelValue || placeholderText.value
+    updateInputWidth()
+  }
+)
+
+// 监听 currentPlugin 变化
+watch(
+  () => windowStore.currentPlugin,
   () => {
     measureRef.value!.textContent = props.modelValue || placeholderText.value
     updateInputWidth()

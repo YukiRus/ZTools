@@ -46,6 +46,14 @@ contextBridge.exposeInMainWorld('ztools', {
     ipcRenderer.invoke('kill-plugin-and-return', pluginPath),
   sendInputEvent: (event: any) => ipcRenderer.invoke('send-input-event', event),
   selectAvatar: () => ipcRenderer.invoke('select-avatar'),
+  // 历史记录管理
+  removeFromHistory: (appPath: string, featureCode?: string) =>
+    ipcRenderer.invoke('remove-from-history', appPath, featureCode),
+  // 固定应用管理
+  pinApp: (app: any) => ipcRenderer.invoke('pin-app', app),
+  unpinApp: (appPath: string, featureCode?: string) =>
+    ipcRenderer.invoke('unpin-app', appPath, featureCode),
+  updatePinnedOrder: (newOrder: any[]) => ipcRenderer.invoke('update-pinned-order', newOrder),
   hidePlugin: () => ipcRenderer.send('hide-plugin'),
   onContextMenuCommand: (callback: (command: string) => void) => {
     ipcRenderer.on('context-menu-command', (_event, command) => callback(command))
@@ -85,6 +93,9 @@ contextBridge.exposeInMainWorld('ztools', {
   onHistoryChanged: (callback: () => void) => {
     ipcRenderer.on('history-changed', callback)
   },
+  onPinnedChanged: (callback: () => void) => {
+    ipcRenderer.on('pinned-changed', callback)
+  },
   onIpcLaunch: (
     callback: (options: {
       path: string
@@ -105,6 +116,13 @@ contextBridge.exposeInMainWorld('ztools', {
     ipcRenderer.invoke('unregister-global-shortcut', shortcut),
   // 子输入框相关
   notifySubInputChange: (text: string) => ipcRenderer.send('notify-sub-input-change', text),
+  setSubInputValue: (text: string) => ipcRenderer.invoke('set-sub-input-value', text),
+  onSetSubInputValue: (callback: (text: string) => void) => {
+    ipcRenderer.on('set-sub-input-value', (_event, text) => callback(text))
+  },
+  onFocusSubInput: (callback: () => void) => {
+    ipcRenderer.on('focus-sub-input', callback)
+  },
   onUpdateSubInputPlaceholder: (
     callback: (data: { pluginPath: string; placeholder: string }) => void
   ) => {

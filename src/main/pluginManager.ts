@@ -51,9 +51,8 @@ class PluginManager {
       this.pluginView = cached.view
       this.mainWindow.contentView.addChildView(this.pluginView)
 
-      // 获取主窗口大小并重新设置视图位置
-      // const [windowWidth] = this.mainWindow.getSize()
       // 之前已经加载过 直接让插件视图获取焦点
+      console.log('插件视图获取焦点')
       this.pluginView.webContents.focus()
 
       // 恢复之前的高度或使用默认高度

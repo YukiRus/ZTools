@@ -373,5 +373,58 @@
                 ]
             }
         ]
+    },
+    {
+        "downloadUrl": "https://ilt.lanzouu.com/i7Z6m3cxzr6h",
+        "logo": "data:image/png;base64,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",
+        "version": "2.1.11",
+        "description": "一键收藏、搜索web网页，打造个人网站网址导航站、书签导入、网页快开神器！",
+        "author": "呀唔咪",
+        "homepage": null,
+        "features": [
+            {
+                "code": "goodweb",
+                "explain": "一键收藏网页、打造个人网址导航站、网页快开神器！",
+                "icon": "logo.png",
+                "cmds": [
+                    "网址精灵",
+                    "网址导航",
+                    "网页收藏",
+                    "web"
+                ]
+            },
+            {
+                "code": "searchweb",
+                "explain": "在网址精灵中搜索网址卡片！",
+                "icon": "search.png",
+                "cmds": [
+                    {
+                        "type": "over",
+                        "label": "搜索网址卡片",
+                        "minLength": 2,
+                        "maxLength": 20
+                    }
+                ],
+                "mainPush": true
+            },
+            {
+                "code": "addweb",
+                "explain": "一键快速添加网址卡片！",
+                "icon": "logo.png",
+                "cmds": [
+                    {
+                        "type": "regex",
+                        "label": "添加网址卡片",
+                        "match": "/^(http|https|ftp|chrome|edge|mailto|file|data|ws|wss|irc|git|svn|utools):///"
+                    }
+                ]
+            }
+        ],
+        "platform": [
+            "darwin",
+            "win32",
+            "linux"
+        ],
+        "name": "网址精灵"
     }
 ]

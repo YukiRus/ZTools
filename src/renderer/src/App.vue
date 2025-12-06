@@ -106,9 +106,15 @@ function handleKeydown(event: KeyboardEvent): void {
     }
 
     if (currentView.value === ViewMode.Plugin) {
-      // 插件页面 -> 返回搜索
-      currentView.value = ViewMode.Search
-      window.ztools.hidePlugin()
+      // 插件页面 ESC 键处理
+      if (searchQuery.value.trim()) {
+        // 如果输入框有内容，先清空输入框
+        searchQuery.value = ''
+      } else {
+        // 输入框为空，退出插件返回搜索
+        currentView.value = ViewMode.Search
+        window.ztools.hidePlugin()
+      }
       return
     }
 
@@ -222,6 +228,20 @@ onMounted(async () => {
       windowStore.updateSubInputPlaceholder(data.pluginPath, data.placeholder)
     }
   )
+
+  // 监听设置子输入框值事件
+  window.ztools.onSetSubInputValue((text: string) => {
+    console.log('收到设置子输入框值事件:', text)
+    searchQuery.value = text
+  })
+
+  // 监听聚焦子输入框事件
+  window.ztools.onFocusSubInput(() => {
+    console.log('收到聚焦子输入框事件')
+    nextTick(() => {
+      searchBoxRef.value?.focus()
+    })
+  })
 
   // 监听显示插件占位区域事件（插件启动前）
   window.ztools.onShowPluginPlaceholder(() => {

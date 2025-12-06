@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, nextTick } from 'vue'
 import Fuse from 'fuse.js'
 import { pinyin } from 'pinyin-pro'
 
@@ -66,6 +66,8 @@ export const useAppDataStore = defineStore('appData', () => {
   const fuse = ref<Fuse<App> | null>(null)
   // 是否已初始化
   const isInitialized = ref(false)
+  // 标记是否是本地触发的更新（用于避免重复加载）
+  let isLocalPinnedUpdate = false
 
   // 从数据库加载所有数据（仅在初始化时调用一次）
   async function initializeData(): Promise<void> {
@@ -89,6 +91,18 @@ export const useAppDataStore = defineStore('appData', () => {
         loadApps()
       })
 
+      // 监听固定列表变化事件
+      window.ztools.onPinnedChanged(() => {
+        // 如果是本地触发的更新，忽略此事件，避免重复加载
+        if (isLocalPinnedUpdate) {
+          console.log('忽略自己触发的固定列表变化通知')
+          isLocalPinnedUpdate = false
+          return
+        }
+        console.log('收到固定列表变化通知，重新加载')
+        loadPinnedData()
+      })
+
       isInitialized.value = true
       console.log('应用数据初始化完成')
     } catch (error) {
@@ -104,9 +118,27 @@ export const useAppDataStore = defineStore('appData', () => {
   // 加载历史记录数据
   async function loadHistoryData(): Promise<void> {
     try {
-      const data = await window.ztools.dbGet(HISTORY_DOC_ID)
+      const [data, plugins] = await Promise.all([
+        window.ztools.dbGet(HISTORY_DOC_ID),
+        window.ztools.getPlugins()
+      ])
+
       if (data && Array.isArray(data)) {
-        history.value = data
+        // 获取所有已安装插件的路径 Set
+        const installedPluginPaths = new Set(plugins.map((p: any) => p.path))
+
+        // 过滤掉已卸载的插件
+        const filteredData = data.filter((item: any) => {
+          if (item.type === 'plugin') {
+            return installedPluginPaths.has(item.path)
+          }
+          return true
+        })
+
+        history.value = []
+        nextTick(() => {
+          history.value = filteredData
+        })
       } else {
         history.value = []
       }
@@ -119,9 +151,24 @@ export const useAppDataStore = defineStore('appData', () => {
   // 加载固定列表数据
   async function loadPinnedData(): Promise<void> {
     try {
-      const data = await window.ztools.dbGet(PINNED_DOC_ID)
+      const [data, plugins] = await Promise.all([
+        window.ztools.dbGet(PINNED_DOC_ID),
+        window.ztools.getPlugins()
+      ])
+
       if (data && Array.isArray(data)) {
-        pinnedApps.value = data
+        // 获取所有已安装插件的路径 Set
+        const installedPluginPaths = new Set(plugins.map((p: any) => p.path))
+
+        // 过滤掉已卸载的插件
+        const filteredData = data.filter((item: any) => {
+          if (item.type === 'plugin') {
+            return installedPluginPaths.has(item.path)
+          }
+          return true
+        })
+
+        pinnedApps.value = filteredData
       } else {
         pinnedApps.value = []
       }
@@ -195,6 +242,9 @@ export const useAppDataStore = defineStore('appData', () => {
           // 2. 每个 feature 的每个 cmd 都作为独立的搜索项
           for (const feature of plugin.features) {
             if (feature.cmds && Array.isArray(feature.cmds)) {
+              // 优先使用 feature 的 icon，如果没有则使用 plugin 的 logo
+              const featureIcon = feature.icon || plugin.logo
+
               for (const cmd of feature.cmds) {
                 // cmd 可能是字符串、正则配置对象或 over 配置对象
                 const isMatchCmd =
@@ -206,7 +256,7 @@ export const useAppDataStore = defineStore('appData', () => {
                   regexItems.push({
                     name: cmdName,
                     path: plugin.path,
-                    icon: plugin.logo,
+                    icon: featureIcon,
                     type: 'plugin',
                     featureCode: feature.code,
                     pluginExplain: feature.explain,
@@ -218,7 +268,7 @@ export const useAppDataStore = defineStore('appData', () => {
                   pluginItems.push({
                     name: cmdName,
                     path: plugin.path,
-                    icon: plugin.logo,
+                    icon: featureIcon,
                     type: 'plugin',
                     featureCode: feature.code,
                     pluginExplain: feature.explain,
@@ -364,43 +414,6 @@ export const useAppDataStore = defineStore('appData', () => {
     }
   }
 
-  // 添加或更新历史记录
-  async function addToHistory(app: App): Promise<void> {
-    const now = Date.now()
-    // 对于插件，需要同时匹配 path 和 featureCode
-    const existingIndex = history.value.findIndex((item) => {
-      if (item.type === 'plugin' && app.type === 'plugin') {
-        return item.path === app.path && item.featureCode === app.featureCode
-      }
-      return item.path === app.path
-    })
-
-    if (existingIndex >= 0) {
-      // 已存在,更新使用时间和次数
-      history.value[existingIndex].lastUsed = now
-      history.value[existingIndex].useCount++
-    } else {
-      // 新记录
-      history.value.push({
-        name: app.name,
-        path: app.path,
-        icon: app.icon,
-        pinyin: app.pinyin,
-        pinyinAbbr: app.pinyinAbbr,
-        type: app.type,
-        featureCode: app.featureCode, // 保存 featureCode
-        pluginExplain: app.pluginExplain, // 保存插件说明
-        lastUsed: now,
-        useCount: 1
-      })
-    }
-
-    // 按最近使用时间排序
-    history.value.sort((a, b) => b.lastUsed - a.lastUsed)
-
-    await saveHistory()
-  }
-
   // 获取最近使用的应用
   function getRecentApps(limit?: number): App[] {
     if (limit) {
@@ -411,14 +424,8 @@ export const useAppDataStore = defineStore('appData', () => {
 
   // 从历史记录中删除指定应用
   async function removeFromHistory(appPath: string, featureCode?: string): Promise<void> {
-    history.value = history.value.filter((item) => {
-      // 对于插件，需要同时匹配 path 和 featureCode
-      if (item.type === 'plugin' && featureCode !== undefined) {
-        return !(item.path === appPath && item.featureCode === featureCode)
-      }
-      return item.path !== appPath
-    })
-    await saveHistory()
+    await window.ztools.removeFromHistory(appPath, featureCode)
+    // 后端会发送 history-changed 事件，触发重新加载
   }
 
   // 清空历史记录
@@ -460,24 +467,16 @@ export const useAppDataStore = defineStore('appData', () => {
 
   // 固定应用
   async function pinApp(app: App): Promise<void> {
-    if (isPinned(app.path, app.featureCode)) {
-      return // 已经固定了
-    }
-
-    pinnedApps.value.push(app)
-    await savePinned()
+    // 将 Vue 响应式对象转换为纯对象，避免 IPC 传递时的克隆错误
+    const plainApp = JSON.parse(JSON.stringify(app))
+    await window.ztools.pinApp(plainApp)
+    // 后端会发送 pinned-changed 事件，触发重新加载
   }
 
   // 取消固定
   async function unpinApp(appPath: string, featureCode?: string): Promise<void> {
-    pinnedApps.value = pinnedApps.value.filter((app) => {
-      // 对于插件，需要同时匹配 path 和 featureCode
-      if (app.type === 'plugin' && featureCode !== undefined) {
-        return !(app.path === appPath && app.featureCode === featureCode)
-      }
-      return app.path !== appPath
-    })
-    await savePinned()
+    await window.ztools.unpinApp(appPath, featureCode)
+    // 后端会发送 pinned-changed 事件，触发重新加载
   }
 
   // 获取固定列表
@@ -487,8 +486,22 @@ export const useAppDataStore = defineStore('appData', () => {
 
   // 更新固定列表顺序
   async function updatePinnedOrder(newOrder: App[]): Promise<void> {
+    // 乐观更新：立即更新本地状态，避免等待后端导致的延迟和闪动
     pinnedApps.value = newOrder
-    await savePinned()
+
+    // 标记这是本地触发的更新
+    isLocalPinnedUpdate = true
+
+    // 异步保存到后端，不等待完成
+    // 将 Vue 响应式对象数组转换为纯对象数组，避免 IPC 传递时的克隆错误
+    const plainOrder = JSON.parse(JSON.stringify(newOrder))
+    window.ztools.updatePinnedOrder(plainOrder).catch((error) => {
+      console.error('保存固定列表顺序失败:', error)
+      // 如果保存失败，重置标志并重新从后端加载数据
+      isLocalPinnedUpdate = false
+      loadPinnedData()
+    })
+    // 注意：不需要等待 pinned-changed 事件，因为本地已经更新了
   }
 
   // 清空固定列表

@@ -51,6 +51,16 @@ window.ztools = {
     // 通知主进程更新 placeholder
     return await electron.ipcRenderer.invoke('set-sub-input', placeholder)
   },
+  // 设置子输入框的值
+  setSubInputValue: async (text) => {
+    console.log('插件设置子输入框值:', text)
+    return await electron.ipcRenderer.invoke('set-sub-input-value', text)
+  },
+  // 聚焦子输入框
+  subInputFocus: () => {
+    console.log('插件请求聚焦子输入框')
+    return electron.ipcRenderer.sendSync('sub-input-focus')
+  },
   // 标准数据库 API - 完全兼容 UTools
   // 同步版本（供插件使用）
   db: {
@@ -157,7 +167,7 @@ window.ztools = {
 
     // 创建 Proxy 对象模拟 BrowserWindow
     const createProxy = (path = []) => {
-      return new Proxy(() => {}, {
+      return new Proxy(() => { }, {
         get: (target, prop) => {
           if (typeof prop !== 'string') return undefined
 

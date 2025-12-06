@@ -94,7 +94,7 @@ class WindowManager {
         // 让插件视图获取焦点
         pluginManager.focusPluginView()
       } else {
-        this.mainWindow?.focus()
+        this.mainWindow?.webContents.focus()
         // 通知渲染进程聚焦搜索框
         this.mainWindow?.webContents.send('focus-search')
       }
@@ -284,7 +284,7 @@ class WindowManager {
     }
 
     this.mainWindow.show()
-    this.mainWindow.focus()
+    this.mainWindow.webContents.focus()
   }
 
   /**
@@ -406,7 +406,7 @@ class WindowManager {
     // 显示窗口
     setTimeout(() => {
       this.mainWindow?.show()
-      this.mainWindow?.focus()
+      this.mainWindow?.webContents.focus()
     }, 50)
   }
 

@@ -7,6 +7,7 @@ import { downloadFile } from '../../utils/download.js'
 import { sleep } from '../../utils/common.js'
 import databaseAPI from '../shared/database'
 import { pluginFeatureAPI } from '../plugin/feature'
+import { normalizeIconPath } from '../../common/iconUtils'
 
 // 插件目录
 const PLUGIN_DIR = path.join(app.getPath('userData'), 'plugins')
@@ -67,6 +68,15 @@ export class PluginsAPI {
       for (const plugin of plugins) {
         const dynamicFeatures = pluginFeatureAPI.loadDynamicFeatures(plugin.name)
         plugin.features = [...(plugin.features || []), ...dynamicFeatures]
+
+        // 处理每个 feature 的 icon 路径
+        if (plugin.features && Array.isArray(plugin.features)) {
+          for (const feature of plugin.features) {
+            if (feature.icon) {
+              feature.icon = normalizeIconPath(feature.icon, plugin.path)
+            }
+          }
+        }
       }
 
       return plugins
@@ -308,47 +318,49 @@ export class PluginsAPI {
       await databaseAPI.dbPut('plugins', plugins)
 
       // 清理历史记录
-      try {
-        const history: any = await databaseAPI.dbGet('app-history')
-        if (history && Array.isArray(history)) {
-          // 如果类型是 plugin 且 path 匹配，则删除
-          const filteredHistory = history.filter((item: any) => {
-            if (item.type === 'plugin' && item.path === pluginPath) {
-              return false
-            }
-            return true
-          })
-          if (filteredHistory.length !== history.length) {
-            await databaseAPI.dbPut('app-history', filteredHistory)
-            console.log(`已清理 ${history.length - filteredHistory.length} 条历史记录`)
-          }
-        }
-      } catch (error) {
-        console.error('清理历史记录失败:', error)
-      }
+      // 卸载插件时不清理历史记录，以便重新安装后恢复
+      // try {
+      //   const history: any = await databaseAPI.dbGet('app-history')
+      //   if (history && Array.isArray(history)) {
+      //     // 如果类型是 plugin 且 path 匹配，则删除
+      //     const filteredHistory = history.filter((item: any) => {
+      //       if (item.type === 'plugin' && item.path === pluginPath) {
+      //         return false
+      //       }
+      //       return true
+      //     })
+      //     if (filteredHistory.length !== history.length) {
+      //       await databaseAPI.dbPut('app-history', filteredHistory)
+      //       console.log(`已清理 ${history.length - filteredHistory.length} 条历史记录`)
+      //     }
+      //   }
+      // } catch (error) {
+      //   console.error('清理历史记录失败:', error)
+      // }
 
       // 清理固定列表
-      try {
-        const pinned: any = await databaseAPI.dbGet('pinned-apps')
-        if (pinned && Array.isArray(pinned)) {
-          // 匹配插件路径
-          const filteredPinned = pinned.filter((item: any) => {
-            if (item.type === 'plugin' && item.path === pluginPath) {
-              return false
-            }
-            return true
-          })
-          if (filteredPinned.length !== pinned.length) {
-            await databaseAPI.dbPut('pinned-apps', filteredPinned)
-            console.log(`已清理 ${pinned.length - filteredPinned.length} 条固定记录`)
-          }
-        }
-      } catch (error) {
-        console.error('清理固定列表失败:', error)
-      }
+      // 卸载插件时不清理固定列表，以便重新安装后恢复
+      // try {
+      //   const pinned: any = await databaseAPI.dbGet('pinned-apps')
+      //   if (pinned && Array.isArray(pinned)) {
+      //     // 匹配插件路径
+      //     const filteredPinned = pinned.filter((item: any) => {
+      //       if (item.type === 'plugin' && item.path === pluginPath) {
+      //         return false
+      //       }
+      //       return true
+      //     })
+      //     if (filteredPinned.length !== pinned.length) {
+      //       await databaseAPI.dbPut('pinned-apps', filteredPinned)
+      //       console.log(`已清理 ${pinned.length - filteredPinned.length} 条固定记录`)
+      //     }
+      //   }
+      // } catch (error) {
+      //   console.error('清理固定列表失败:', error)
+      // }
 
-      // 清理动态 features
-      pluginFeatureAPI.clearPluginFeatures(pluginInfo.name)
+      // 卸载插件时不清理动态 features，以便重新安装后恢复
+      // pluginFeatureAPI.clearPluginFeatures(pluginInfo.name)
 
       this.mainWindow?.webContents.send('plugins-changed')
 

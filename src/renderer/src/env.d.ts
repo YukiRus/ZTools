@@ -10,6 +10,7 @@ declare global {
         featureCode?: string
         param?: any
         name?: string
+        cmdType?: string // cmd 类型（用于判断是否添加历史记录）
       }) => Promise<any>
       hideWindow: () => void
       resizeWindow: (height: number) => void
@@ -56,6 +57,12 @@ declare global {
         clickCount?: number
       }) => Promise<{ success: boolean; error?: string }>
       selectAvatar: () => Promise<{ success: boolean; path?: string; error?: string }>
+      // 历史记录管理
+      removeFromHistory: (appPath: string, featureCode?: string) => Promise<void>
+      // 固定应用管理
+      pinApp: (app: any) => Promise<void>
+      unpinApp: (appPath: string, featureCode?: string) => Promise<void>
+      updatePinnedOrder: (newOrder: any[]) => Promise<void>
       hidePlugin: () => void
       onContextMenuCommand: (callback: (command: string) => void) => void
       onFocusSearch: (callback: () => void) => void
@@ -66,6 +73,8 @@ declare global {
       onPluginClosed: (callback: () => void) => void
       onPluginsChanged: (callback: () => void) => void
       onAppsChanged: (callback: () => void) => void
+      onHistoryChanged: (callback: () => void) => void
+      onPinnedChanged: (callback: () => void) => void
       onShowPluginPlaceholder: (callback: () => void) => void
       onShowSettings: (callback: () => void) => void
       onAppLaunched: (callback: () => void) => void
@@ -76,6 +85,7 @@ declare global {
           featureCode?: string
           param?: any
           name?: string
+          cmdType?: string // cmd 类型（用于判断是否添加历史记录）
         }) => void
       ) => void
       openPluginDevTools: () => Promise<{ success: boolean; error?: string }>
@@ -131,6 +141,9 @@ declare global {
       getLastCopiedText: (timeLimit: number) => Promise<string>
       // 子输入框相关
       notifySubInputChange: (text: string) => void
+      setSubInputValue: (text: string) => Promise<boolean>
+      onSetSubInputValue: (callback: (text: string) => void) => void
+      onFocusSubInput: (callback: () => void) => void
       onUpdateSubInputPlaceholder?: (
         callback: (data: { pluginPath: string; placeholder: string }) => void
       ) => void
@@ -138,4 +151,4 @@ declare global {
   }
 }
 
-export {}
+export { }
