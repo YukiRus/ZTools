@@ -178,14 +178,13 @@
                 </template>
                 <template v-else-if="cmd.type === 'files'">
                   <span class="tag-text">{{ cmd.name }}</span>
-                  <span v-if="cmd.match.fileType" class="tag-info">{{
-                    cmd.match.fileType === 'file' ? '文件' : '文件夹'
-                  }}</span>
                   <span v-if="cmd.match.extensions" class="tag-info"
                     >{{ cmd.match.extensions.slice(0, 3).join(', ')
                     }}{{ cmd.match.extensions.length > 3 ? '...' : '' }}</span
                   >
-                  <span class="tag-badge">文件</span>
+                  <span class="tag-badge">{{
+                    cmd.match.fileType === 'directory' ? '文件夹' : '文件'
+                  }}</span>
                 </template>
                 <template v-else-if="cmd.type === 'window'">
                   <span class="tag-text">{{ cmd.name }}</span>
