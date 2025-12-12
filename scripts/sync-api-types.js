@@ -16,13 +16,19 @@ const TARGET_DIR = path.join(__dirname, '../ztools-api-types')
 
 // 替换规则
 const REPLACEMENTS = [
-  // API 名称
+  // API 名称和接口名
   { from: /window\.utools/g, to: 'window.ztools' },
   { from: /UToolsAPI/g, to: 'ZToolsAPI' },
+  { from: /UtoolsAi/g, to: 'ZToolsAi' }, // 接口名前缀
   { from: /utools-api-types/g, to: 'ztools-api-types' },
+
+  // 变量声明
+  { from: /declare var utools:/g, to: 'declare var ztools:' },
+  { from: /export = utools/g, to: 'export = ztools' },
 
   // 文件名引用
   { from: /utools\.api\.d\.ts/g, to: 'ztools.api.d.ts' },
+  { from: /resource\/utools\.schema/g, to: 'resource/ztools.schema' },
   { from: /utools\.schema\.json/g, to: 'ztools.schema.json' },
 
   // URL 和链接
@@ -30,6 +36,12 @@ const REPLACEMENTS = [
     from: /github\.com\/uTools-Labs\/utools-api-types/g,
     to: 'github.com/ZToolsCenter/ZTools/tree/main/ztools-api-types'
   },
+
+  // 注释和文档中的 utools（小写）
+  { from: /将 utools 挂载/g, to: '将 ztools 挂载' },
+  { from: /ubrowserId/g, to: 'zbrowserId' },
+  { from: /ubrowser/g, to: 'zbrowser' },
+  { from: /utools\./g, to: 'ztools.' }, // 方法调用 utools.xxx() -> ztools.xxx()
 
   // 描述文本（但保留一些特定的）
   { from: /\buTools\b/g, to: 'ZTools' }
