@@ -29,6 +29,9 @@ export class PluginUIAPI {
     ipcMain.on('sub-input-focus', (event) => {
       event.returnValue = this.subInputFocus()
     })
+    ipcMain.on('sub-input-blur', (event) => {
+      event.returnValue = this.subInputBlur()
+    })
 
     // 隐藏插件
     ipcMain.on('hide-plugin', () => this.hidePlugin())
@@ -103,6 +106,10 @@ export class PluginUIAPI {
       // 发送事件到主窗口渲染进程，设置输入框的值
       this.mainWindow?.webContents.send('set-sub-input-value', text)
       console.log('设置子输入框值:', text)
+      // 触发插件的 onChange 回调
+      this.notifySubInputChange(text)
+      // 聚焦子输入框
+      this.subInputFocus()
       return true
     } catch (error: unknown) {
       console.error('设置子输入框值失败:', error)
@@ -122,6 +129,24 @@ export class PluginUIAPI {
       return true
     } catch (error: unknown) {
       console.error('聚焦子输入框失败:', error)
+      return false
+    }
+  }
+
+  private subInputBlur(): boolean {
+    try {
+      // 让插件应用获得焦点（子输入框会自动失去焦点）
+      const currentPluginView = this.pluginManager?.getCurrentPluginView()
+      if (currentPluginView) {
+        currentPluginView.webContents.focus()
+        console.log('插件应用获取焦点')
+        return true
+      } else {
+        console.warn('没有活动的插件,无法获取焦点')
+        return false
+      }
+    } catch (error: unknown) {
+      console.error('插件获取焦点失败:', error)
       return false
     }
   }

@@ -16,6 +16,7 @@ interface NativeAddon {
   getActiveWindow: () => ActiveWindowResult | null
   activateWindow: (identifier: string | number) => boolean
   simulatePaste: () => boolean
+  simulateKeyboardTap: (key: string, ...modifiers: string[]) => boolean
   startRegionCapture: (
     callback: (result: { success: boolean; width?: number; height?: number }) => void
   ) => void
@@ -190,6 +191,31 @@ export class WindowManager {
    */
   static simulatePaste(): boolean {
     return (addon as NativeAddon).simulatePaste()
+  }
+
+  /**
+   * 模拟键盘按键
+   * @param {string} key - 要模拟的按键
+   * @param {...string} modifiers - 修饰键（shift、ctrl、alt、meta）
+   * @returns {boolean} 是否成功
+   * @example
+   * // 模拟按下字母 'a'
+   * WindowManager.simulateKeyboardTap('a');
+   *
+   * // 模拟 Command+C (macOS) 或 Ctrl+C (Windows)
+   * WindowManager.simulateKeyboardTap('c', 'meta');
+   *
+   * // 模拟 Shift+Tab
+   * WindowManager.simulateKeyboardTap('tab', 'shift');
+   *
+   * // 模拟 Command+Shift+S (macOS)
+   * WindowManager.simulateKeyboardTap('s', 'meta', 'shift');
+   */
+  static simulateKeyboardTap(key: string, ...modifiers: string[]): boolean {
+    if (typeof key !== 'string' || !key) {
+      throw new TypeError('key must be a non-empty string')
+    }
+    return (addon as NativeAddon).simulateKeyboardTap(key, ...modifiers)
   }
 }
 

@@ -22,7 +22,8 @@ export class PluginClipboardAPI {
     })
 
     // 复制图片到剪贴板
-    ipcMain.on('copy-image', (event, image: string | Buffer) => {
+    ipcMain.on('copy-image', (event, image: string | Buffer | Uint8Array) => {
+      console.log('复制图片', image)
       try {
         let nativeImg
 
@@ -34,6 +35,10 @@ export class PluginClipboardAPI {
           }
         } else if (Buffer.isBuffer(image)) {
           nativeImg = nativeImage.createFromBuffer(image)
+        } else if (image instanceof Uint8Array) {
+          // 将 Uint8Array 转换为 Buffer
+          const buffer = Buffer.from(image)
+          nativeImg = nativeImage.createFromBuffer(buffer)
         } else {
           throw new Error('不支持的图片类型')
         }

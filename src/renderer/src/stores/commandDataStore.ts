@@ -264,6 +264,10 @@ export const useCommandDataStore = defineStore('commandData', () => {
               const featureIcon = feature.icon || plugin.logo
 
               for (const cmd of feature.cmds) {
+                // 忽略 files 和 img 类型的 cmd
+                if (typeof cmd === 'object' && (cmd.type === 'files' || cmd.type === 'img')) {
+                  continue
+                }
                 // cmd 可能是字符串、正则配置对象或 over 配置对象
                 const isMatchCmd =
                   typeof cmd === 'object' && (cmd.type === 'regex' || cmd.type === 'over')

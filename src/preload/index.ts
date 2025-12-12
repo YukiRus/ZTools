@@ -167,6 +167,8 @@ const api = {
   },
   // 获取应用版本
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  // 获取应用名称
+  getAppName: () => ipcRenderer.invoke('get-app-name'),
   // 获取环境版本信息 (Electron, Node, Chrome等)
   getSystemVersions: () => ipcRenderer.invoke('get-system-versions'),
   // 获取系统平台 (darwin, win32, linux)
@@ -323,6 +325,11 @@ declare global {
         deletedCount?: number
         error?: string
       }>
+      // 应用信息
+      getAppVersion: () => Promise<string>
+      getAppName: () => Promise<string>
+      getSystemVersions: () => Promise<NodeJS.ProcessVersions>
+      getPlatform: () => NodeJS.Platform
     }
   }
 }

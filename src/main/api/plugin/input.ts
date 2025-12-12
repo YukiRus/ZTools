@@ -1,4 +1,5 @@
 import { ipcMain } from 'electron'
+import { WindowManager } from '../../core/native/index.js'
 
 /**
  * 输入事件API - 插件专用
@@ -23,6 +24,11 @@ export class PluginInputAPI {
           | Electron.KeyboardInputEvent
       ) => this.sendInputEvent(inputEvent)
     )
+
+    // 模拟键盘按键
+    ipcMain.on('simulate-keyboard-tap', (event, key: string, modifiers: string[]) => {
+      event.returnValue = this.simulateKeyboardTap(key, modifiers)
+    })
 
     // 检查当前插件是否处于开发模式
     ipcMain.on('is-dev', (event) => {
@@ -57,6 +63,15 @@ export class PluginInputAPI {
         success: false,
         error: error instanceof Error ? error.message : '未知错误'
       }
+    }
+  }
+
+  private simulateKeyboardTap(key: string, modifiers: string[] = []): boolean {
+    try {
+      return WindowManager.simulateKeyboardTap(key, ...modifiers)
+    } catch (error: unknown) {
+      console.error('模拟键盘按键失败:', error)
+      return false
     }
   }
 }

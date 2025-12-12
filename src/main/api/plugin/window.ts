@@ -1,15 +1,14 @@
 import { ipcMain, webContents } from 'electron'
 import pluginWindowManager from '../../core/pluginWindowManager.js'
+import windowManager from '../../windowManager.js'
 
 /**
  * 插件独立窗口管理API - 插件专用
  */
 export class PluginWindowAPI {
-  private mainWindow: Electron.BrowserWindow | null = null
   private pluginManager: any = null
 
-  public init(mainWindow: Electron.BrowserWindow, pluginManager: any): void {
-    this.mainWindow = mainWindow
+  public init(_mainWindow: Electron.BrowserWindow, pluginManager: any): void {
     this.pluginManager = pluginManager
     this.setupIPC()
   }
@@ -74,9 +73,8 @@ export class PluginWindowAPI {
     })
 
     // 隐藏主窗口
-    ipcMain.handle('hide-main-window', () => {
-      this.mainWindow?.hide()
-      // TODO: 需要调用 windowManager 的逻辑
+    ipcMain.handle('hide-main-window', (_event, isRestorePreWindow: boolean = true) => {
+      windowManager.hideWindow(isRestorePreWindow)
     })
 
     // ipcRenderer.sendTo polyfill

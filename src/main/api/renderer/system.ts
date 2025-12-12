@@ -42,6 +42,7 @@ export class SystemAPI {
 
     // App Info
     ipcMain.handle('get-app-version', () => app.getVersion())
+    ipcMain.handle('get-app-name', () => app.getName())
     ipcMain.handle('get-system-versions', () => process.versions)
     ipcMain.on('get-platform', (event) => {
       event.returnValue = process.platform

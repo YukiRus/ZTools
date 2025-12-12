@@ -25,6 +25,11 @@ window.ztools = {
   // 是否深色主题
   isDarkColors: () => electron.ipcRenderer.sendSync('is-dark-colors'),
   sendInputEvent: async (event) => await electron.ipcRenderer.invoke('send-input-event', event),
+  // 模拟键盘按键
+  simulateKeyboardTap: (key, ...modifiers) => {
+    console.log('插件请求模拟键盘按键:', { key, modifiers })
+    return electron.ipcRenderer.sendSync('simulate-keyboard-tap', key, modifiers)
+  },
   onPluginEnter: async (callback) => {
     console.log('插件请求onPluginEnter')
     enterCallbacks.push(callback)
@@ -68,6 +73,11 @@ window.ztools = {
   subInputFocus: () => {
     console.log('插件请求聚焦子输入框')
     return electron.ipcRenderer.sendSync('sub-input-focus')
+  },
+  // 子输入框失去焦点，插件应用获得焦点
+  subInputBlur: () => {
+    console.log('插件请求子输入框失去焦点')
+    return electron.ipcRenderer.sendSync('sub-input-blur')
   },
   // 标准数据库 API - 完全兼容 UTools
   // 同步版本（供插件使用）

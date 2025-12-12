@@ -282,6 +282,11 @@ class PluginManager {
     return this.currentPluginPath
   }
 
+  // 获取当前加载的插件视图
+  public getCurrentPluginView(): WebContentsView | null {
+    return this.pluginView
+  }
+
   public focusPluginView(): void {
     if (this.pluginView && this.pluginView.webContents) {
       console.log('插件视图获取焦点')
