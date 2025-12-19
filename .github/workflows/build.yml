@@ -44,7 +44,7 @@ jobs:
           npm install
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       # macOS 构建
       - name: Build and Package (macOS)
