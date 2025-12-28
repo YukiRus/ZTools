@@ -44,6 +44,22 @@ textarea {
   ::-webkit-scrollbar-thumb {
     border-color: #f4f4f4;
   }
+
+  /* Windows 根据 data-material 属性使用透明背景 */
+  [data-material="mica"] body,
+  [data-material="acrylic"] body {
+    background-color: transparent;
+  }
+
+  [data-material="mica"] ::-webkit-scrollbar-track-piece,
+  [data-material="acrylic"] ::-webkit-scrollbar-track-piece {
+    background-color: transparent;
+  }
+
+  [data-material="mica"] ::-webkit-scrollbar-thumb,
+  [data-material="acrylic"] ::-webkit-scrollbar-thumb {
+    border-color: transparent;
+  }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -59,5 +75,21 @@ textarea {
   body {
     background-color: #303133;
     color: #fff;
+  }
+
+  /* Windows 根据 data-material 属性使用透明背景 */
+  [data-material="mica"] body,
+  [data-material="acrylic"] body {
+    background-color: transparent;
+  }
+
+  [data-material="mica"] &::-webkit-scrollbar-track-piece,
+  [data-material="acrylic"] &::-webkit-scrollbar-track-piece {
+    background-color: transparent;
+  }
+
+  [data-material="mica"] &::-webkit-scrollbar-thumb,
+  [data-material="acrylic"] &::-webkit-scrollbar-thumb {
+    border-color: transparent;
   }
 }

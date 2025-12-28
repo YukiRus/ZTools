@@ -1,6 +1,6 @@
 import { createApp } from 'vue'
-import './global.css'
 import App from './App.vue'
+import './global.css'
 
 // 检测操作系统并添加类名到 html 元素
 function detectOS(): void {

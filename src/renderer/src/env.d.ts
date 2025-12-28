@@ -38,7 +38,9 @@ declare global {
       setWindowPosition: (x: number, y: number) => void
       setWindowSizeLock: (lock: boolean) => void
       setWindowOpacity: (opacity: number) => void
+      getWindowMaterial: () => Promise<'mica' | 'acrylic' | 'none'>
       setTrayIconVisible: (visible: boolean) => Promise<void>
+      setWindowMaterial: (material: 'mica' | 'acrylic' | 'none') => Promise<{ success: boolean }>
       setLaunchAtLogin: (enable: boolean) => Promise<void>
       getLaunchAtLogin: () => Promise<boolean>
       setTheme: (theme: string) => Promise<void>
@@ -205,6 +207,7 @@ declare global {
       onUpdatePrimaryColor: (
         callback: (data: { primaryColor: string; customColor?: string }) => void
       ) => void
+      onUpdateWindowMaterial?: (callback: (material: 'mica' | 'acrylic' | 'none') => void) => void
       // 软件更新
       updater: {
         checkUpdate: () => Promise<{
@@ -254,4 +257,5 @@ declare global {
   }
 }
 
-export {}
+export { }
+

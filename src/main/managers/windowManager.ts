@@ -15,10 +15,14 @@ import trayIcon from '../../../resources/icons/trayTemplate@2x.png?asset'
 import windowsIcon from '../../../resources/icons/windows-icon.png?asset'
 
 import api from '../api'
+import lmdbInstance from '../core/lmdb/lmdbInstance'
 import clipboardManager from './clipboardManager'
 
 import { MAX_WINDOW_HEIGHT, WINDOW_INITIAL_HEIGHT, WINDOW_WIDTH } from '../common/constants'
 import pluginManager from './pluginManager'
+
+// 窗口材质类型
+type WindowMaterial = 'mica' | 'acrylic' | 'none'
 
 /**
  * 窗口管理器
@@ -98,18 +102,22 @@ class WindowManager {
       }
     }
 
-    // Windows 系统配置
-    if (platform.isWindows) {
-      windowConfig.backgroundColor = '#ffffff'
-      windowConfig.transparent = false
-    }
     // macOS 系统配置
-    else if (platform.isMacOS) {
+    if (platform.isMacOS) {
       windowConfig.transparent = true
       windowConfig.vibrancy = 'fullscreen-ui'
     }
+    // Windows 系统配置（不设置 transparent，让 setBackgroundMaterial 生效）
+    else if (platform.isWindows) {
+      windowConfig.backgroundColor = '#00000000' // 完全透明，让 Acrylic 显示
+    }
 
     this.mainWindow = new BrowserWindow(windowConfig)
+
+    // Windows 11 根据用户配置设置背景材质
+    if (platform.isWindows) {
+      this.applyWindowMaterialFromSettings()
+    }
 
     // 禁用缩放功能
     this.mainWindow.webContents.setZoomFactor(1.0) // 重置缩放为 100%
@@ -558,6 +566,103 @@ class WindowManager {
         this.tray = null
         this.trayMenu = null
       }
+    }
+  }
+
+  /**
+   * 广播窗口材质到所有渲染进程
+   */
+  private broadcastWindowMaterial(material: WindowMaterial): void {
+    this.mainWindow?.webContents.send('update-window-material', material)
+  }
+
+  /**
+   * 应用窗口材质
+   */
+  private applyMaterial(material: WindowMaterial): void {
+    if (!this.mainWindow) return
+
+    switch (material) {
+      case 'mica':
+        try {
+          this.mainWindow.setBackgroundMaterial('mica')
+          console.log('✅ Mica 材质已启用')
+        } catch (error) {
+          console.error('❌ 设置 Mica 失败:', error)
+          this.mainWindow.setBackgroundColor('#f4f4f4')
+        }
+        break
+      case 'acrylic':
+        try {
+          this.mainWindow.setBackgroundMaterial('acrylic')
+          console.log('✅ Acrylic 材质已启用')
+        } catch (error) {
+          console.error('❌ 设置 Acrylic 失败:', error)
+          this.mainWindow.setBackgroundColor('#f4f4f4')
+        }
+        break
+      case 'none':
+      default:
+        try {
+          this.mainWindow.setBackgroundMaterial('none')
+          this.mainWindow.setBackgroundColor('#f4f4f4')
+          console.log('✅ 已禁用窗口材质')
+        } catch (error) {
+          console.error('❌ 设置背景失败:', error)
+        }
+        break
+    }
+  }
+
+  /**
+   * 从设置中应用窗口材质（启动时调用）
+   */
+  private async applyWindowMaterialFromSettings(): Promise<void> {
+    try {
+      const settings = await lmdbInstance.promises.get('ZTOOLS/settings-general')
+      const material = (settings?.data?.windowMaterial as WindowMaterial) || 'mica'
+
+      console.log('从配置读取窗口材质:', material)
+
+      this.applyMaterial(material)
+
+      // 广播初始状态（延迟确保渲染进程已准备好）
+      setTimeout(() => {
+        this.broadcastWindowMaterial(material)
+      }, 100)
+    } catch (error) {
+      console.error('读取窗口材质配置失败，使用默认值 (mica):', error)
+      this.applyMaterial('mica')
+      setTimeout(() => {
+        this.broadcastWindowMaterial('mica')
+      }, 100)
+    }
+  }
+
+  /**
+   * 设置窗口材质（用户在设置中更改时调用）
+   */
+  public setWindowMaterial(material: WindowMaterial): { success: boolean } {
+    if (!this.mainWindow || !platform.isWindows) {
+      return { success: false }
+    }
+
+    this.applyMaterial(material)
+    this.broadcastWindowMaterial(material)
+
+    return { success: true }
+  }
+
+  /**
+   * 获取当前窗口材质
+   */
+  public async getWindowMaterial(): Promise<WindowMaterial> {
+    try {
+      const settings = await lmdbInstance.promises.get('ZTOOLS/settings-general')
+      return (settings?.data?.windowMaterial as WindowMaterial) || 'mica'
+    } catch (error) {
+      console.error('获取窗口材质失败:', error)
+      return 'mica'
     }
   }
 

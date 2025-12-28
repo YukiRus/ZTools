@@ -119,6 +119,7 @@ function handleAppsUpdate(newOrder: Command[]): void {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 0 12px;
 }
 
 .list-content {
@@ -129,7 +130,7 @@ function handleAppsUpdate(newOrder: Command[]): void {
 .section-header.clickable {
   cursor: pointer;
   margin: 0;
-  padding: 2px 0;
+  padding: 2px 12px;
   min-height: 28px;
 }
 
@@ -140,7 +141,7 @@ function handleAppsUpdate(newOrder: Command[]): void {
 /* 不可展开的标题行 */
 .section-header:not(.clickable) {
   margin: 0;
-  padding: 2px 0;
+  padding: 2px 12px;
   min-height: 28px;
 }
 

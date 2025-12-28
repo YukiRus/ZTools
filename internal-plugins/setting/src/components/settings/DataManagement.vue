@@ -95,10 +95,10 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useToast } from '../../composables/useToast'
 import AdaptiveIcon from '../common/AdaptiveIcon.vue'
 import DetailPanel from '../common/DetailPanel.vue'
 import Icon from '../common/Icon.vue'
-import { useToast } from '../../composables/useToast'
 
 const { success, error, warning, info, confirm } = useToast()
 

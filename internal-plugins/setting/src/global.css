@@ -58,6 +58,34 @@ body::-webkit-scrollbar {
   --bg-color: #f4f4f44f;
 }
 
+/* Windows 下默认使用普通背景色 */
+.os-windows:root {
+  --bg-color: #f4f4f4;
+}
+
+/* Windows 下根据 data-material 属性应用不同材质样式 */
+.os-windows[data-material="mica"]:root {
+  --bg-color: transparent;
+  --card-bg: rgba(255, 255, 255, 0.3);
+  --control-bg: rgba(255, 255, 255, 0.4);
+  --hover-bg: rgba(255, 255, 255, 0.5);
+  --active-bg: rgba(0, 132, 199, 0.15);
+  --divider-color: rgba(0, 0, 0, 0.05);
+}
+
+.os-windows[data-material="acrylic"]:root {
+  --bg-color: transparent;
+  --card-bg: rgba(255, 255, 255, 0.2);
+  --control-bg: rgba(255, 255, 255, 0.3);
+  --hover-bg: rgba(255, 255, 255, 0.4);
+  --active-bg: rgba(0, 132, 199, 0.15);
+  --divider-color: rgba(0, 0, 0, 0.05);
+}
+
+.os-windows[data-material="none"]:root {
+  --bg-color: #f4f4f4;
+}
+
 /* 主题色定义 - 亮色模式 */
 :root,
 .theme-blue {
@@ -121,6 +149,34 @@ body::-webkit-scrollbar {
   /* macOS 暗色模式下使用透明背景 */
   .os-mac:root {
     --bg-color: #3031334f;
+  }
+
+  /* Windows 暗色模式下默认使用普通背景色 */
+  .os-windows:root {
+    --bg-color: #303133;
+  }
+
+  /* Windows 暗色模式下根据 data-material 属性应用不同材质样式 */
+  .os-windows[data-material="mica"]:root {
+    --bg-color: transparent;
+    --card-bg: rgba(255, 255, 255, 0.05);
+    --control-bg: rgba(255, 255, 255, 0.08);
+    --hover-bg: rgba(255, 255, 255, 0.12);
+    --active-bg: rgba(56, 189, 248, 0.15);
+    --divider-color: rgba(255, 255, 255, 0.05);
+  }
+
+  .os-windows[data-material="acrylic"]:root {
+    --bg-color: transparent;
+    --card-bg: rgba(255, 255, 255, 0.03);
+    --control-bg: rgba(255, 255, 255, 0.06);
+    --hover-bg: rgba(255, 255, 255, 0.1);
+    --active-bg: rgba(56, 189, 248, 0.15);
+    --divider-color: rgba(255, 255, 255, 0.05);
+  }
+
+  .os-windows[data-material="none"]:root {
+    --bg-color: #303133;
   }
 
   /* 主题色定义 - 暗色模式 */

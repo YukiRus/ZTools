@@ -14,6 +14,7 @@ const subInputChangeCallbacks = []
 const pluginOutCallbacks = []
 const mainPushCallbacks = []
 const hotkeyRecordedCallbacks = []
+const windowMaterialChangeCallbacks = []
 
 // 获取操作系统类型
 const osType = electron.ipcRenderer.sendSync('get-os-type')
@@ -372,6 +373,10 @@ window.ztools = {
     // ==================== 系统设置 API ====================
     setWindowOpacity: async (opacity) =>
       await electron.ipcRenderer.invoke('internal:set-window-opacity', opacity),
+    setWindowMaterial: async (material) =>
+      await electron.ipcRenderer.invoke('internal:set-window-material', material),
+    getWindowMaterial: async () =>
+      await electron.ipcRenderer.invoke('internal:get-window-material'),
     selectAvatar: async () => await electron.ipcRenderer.invoke('internal:select-avatar'),
     setTheme: async (theme) => await electron.ipcRenderer.invoke('internal:set-theme', theme),
     setTrayIconVisible: async (visible) =>
@@ -398,6 +403,11 @@ window.ztools = {
     // 通知主渲染进程更新主题色
     updatePrimaryColor: async (primaryColor, customColor) =>
       await electron.ipcRenderer.invoke('internal:update-primary-color', primaryColor, customColor),
+
+    // 监听窗口材质更新
+    onUpdateWindowMaterial: (callback) => {
+      windowMaterialChangeCallbacks.push(callback)
+    },
 
     // ==================== 应用更新 API ====================
     updaterCheckUpdate: async () =>
@@ -535,4 +545,9 @@ electron.ipcRenderer.on('get-plugin-mode', (event, { featureCode, callId }) => {
   const mode =
     window.exports && window.exports[featureCode] ? window.exports[featureCode].mode : undefined
   electron.ipcRenderer.send(`plugin-mode-result-${callId}`, mode)
+})
+
+// 监听主进程发送的窗口材质更新事件
+electron.ipcRenderer.on('update-window-material', (event, material) => {
+  windowMaterialChangeCallbacks.forEach((cb) => cb(material))
 })

@@ -190,7 +190,7 @@ defineExpose({
 .app-list {
   flex: 1;
   overflow-y: auto;
-  padding: 0;
+  padding: 0 12px;
 }
 
 .app-grid {

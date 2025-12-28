@@ -90,9 +90,9 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import ShortcutEditor from './ShortcutEditor.vue'
-import Icon from '../common/Icon.vue'
 import { useToast } from '../../composables/useToast'
+import Icon from '../common/Icon.vue'
+import ShortcutEditor from './ShortcutEditor.vue'
 
 const { success, error, warning, info, confirm } = useToast()
 

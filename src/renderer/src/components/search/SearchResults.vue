@@ -1104,7 +1104,7 @@ defineExpose({
   overflow-y: auto;
   overflow-x: hidden;
   user-select: none; /* 禁止选取文本 */
-  padding: 0 12px 2px 12px;
+  padding: 0 0 2px 0;
 
   /* Firefox 滚动条样式 */
   scrollbar-width: thin;

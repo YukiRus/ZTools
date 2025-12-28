@@ -106,6 +106,21 @@
       </div>
     </div>
 
+    <!-- 窗口材质设置（仅 Windows） -->
+    <div v-if="platform === 'win32'" class="setting-item">
+      <div class="setting-label">
+        <span>窗口材质</span>
+        <span class="setting-desc">选择窗口背景材质效果（需要 Windows 11）</span>
+      </div>
+      <div class="setting-control">
+        <select v-model="windowMaterial" class="select" @change="handleWindowMaterialChange">
+          <option value="mica">Mica（云母）</option>
+          <option value="acrylic">Acrylic（亚克力）</option>
+          <option value="none">无</option>
+        </select>
+      </div>
+    </div>
+
     <!-- 搜索框提示文字设置 -->
     <div class="setting-item">
       <div class="setting-label">
@@ -272,15 +287,15 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import {
-  DEFAULT_PLACEHOLDER,
-  DEFAULT_AVATAR,
-  type AutoPasteOption,
-  type AutoClearOption,
-  type ThemeType,
-  type PrimaryColor
-} from '../../constants'
 import { useToast } from '../../composables/useToast'
+import {
+  DEFAULT_AVATAR,
+  DEFAULT_PLACEHOLDER,
+  type AutoClearOption,
+  type AutoPasteOption,
+  type PrimaryColor,
+  type ThemeType
+} from '../../constants'
 
 const { success, error, warning, info, confirm } = useToast()
 
@@ -313,6 +328,9 @@ const showTrayIcon = ref(true)
 
 // 开机启动设置
 const launchAtLogin = ref(false)
+
+// 窗口材质设置
+const windowMaterial = ref<'mica' | 'acrylic' | 'none'>('mica')
 
 // 颜色选择器引用
 const colorPickerInput = ref<HTMLInputElement | null>(null)
@@ -665,6 +683,19 @@ async function handleTrayIconChange(): Promise<void> {
   }
 }
 
+// 处理窗口材质变化
+async function handleWindowMaterialChange(): Promise<void> {
+  try {
+    await saveSettings()
+    // 调用主进程更新材质（会广播到主渲染进程）
+    await window.ztools.internal.setWindowMaterial(windowMaterial.value)
+    // 设置插件自己也需要更新 data-material 属性
+    document.documentElement.setAttribute('data-material', windowMaterial.value)
+  } catch (error) {
+    console.error('更新窗口材质失败:', error)
+  }
+}
+
 // 处理开机启动变化
 async function handleLaunchAtLoginChange(): Promise<void> {
   try {
@@ -888,6 +919,7 @@ async function loadSettings(): Promise<void> {
       autoClear.value = data.autoClear ?? 'immediately'
       theme.value = data.theme ?? 'system'
       primaryColor.value = data.primaryColor ?? 'blue'
+      windowMaterial.value = data.windowMaterial ?? 'mica'
 
       // 加载自定义颜色
       if (data.customColor) {
@@ -934,7 +966,8 @@ async function saveSettings(): Promise<void> {
       theme: theme.value,
       primaryColor: primaryColor.value,
       customColor: customColor.value,
-      showTrayIcon: showTrayIcon.value
+      showTrayIcon: showTrayIcon.value,
+      windowMaterial: windowMaterial.value
     })
   } catch (error) {
     console.error('保存设置失败:', error)
