@@ -1,6 +1,6 @@
 <template>
   <div class="content-panel">
-    <h2 class="section-title">WebDAV 同步</h2>
+    <h2 class="section-title">WebDAV 同步 （Beta）</h2>
     <p class="section-desc">通过 WebDAV 实现多设备数据同步</p>
 
     <!-- 启用同步开关 -->
