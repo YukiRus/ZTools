@@ -3,7 +3,9 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import { v4 as uuidv4 } from 'uuid'
 import databaseAPI from '../api/shared/database'
+import { applyWindowMaterial } from '../utils/windowUtils'
 import { GLOBAL_SCROLLBAR_CSS } from './globalStyles.js'
+import lmdbInstance from './lmdb/lmdbInstance'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -32,6 +34,22 @@ class DetachedWindowManager {
   private detachedWindowMap: Map<string, DetachedWindowInfo> = new Map()
   private resizeSaveTimers: Map<string, NodeJS.Timeout> = new Map()
   private lastSavedSizeByPlugin: Map<string, { width: number; height: number }> = new Map()
+
+  /**
+   * 应用窗口材质（Windows 11）
+   */
+  private async applyWindowMaterial(win: BrowserWindow): Promise<void> {
+    try {
+      const settings = await lmdbInstance.promises.get('ZTOOLS/settings-general')
+      const material = (settings?.data?.windowMaterial as 'mica' | 'acrylic' | 'none') || 'none'
+
+      console.log('分离窗口应用材质:', material)
+      applyWindowMaterial(win, material)
+    } catch (error) {
+      console.error('读取窗口材质配置失败，使用默认值 (mica):', error)
+      applyWindowMaterial(win, 'none')
+    }
+  }
 
   /**
    * 将分离窗口尺寸持久化到数据库（按插件名归档）
@@ -118,7 +136,9 @@ class DetachedWindowManager {
 
       // 创建窗口（macOS 和 Windows 都使用无边框，macOS 保留交通灯）
       const isMac = process.platform === 'darwin'
-      const win = new BrowserWindow({
+      const isWindows = process.platform === 'win32'
+
+      const windowConfig: Electron.BrowserWindowConstructorOptions = {
         width: options.width,
         height: options.height + DETACHED_TITLEBAR_HEIGHT,
         title: options.title,
@@ -130,6 +150,7 @@ class DetachedWindowManager {
         resizable: true,
         minWidth: 400,
         minHeight: 300,
+        hasShadow: true, // 启用窗口阴影（可调整为 false 来移除阴影）
         webPreferences: {
           preload: path.join(__dirname, '../preload/index.js'),
           backgroundThrottling: false, // 窗口最小化时是否继续动画和定时器
@@ -138,7 +159,19 @@ class DetachedWindowManager {
           spellcheck: false, // 禁用拼写检查
           webSecurity: false
         }
-      })
+      }
+
+      // Windows 系统配置（与主窗口保持一致）
+      if (isWindows) {
+        windowConfig.backgroundColor = '#00000000' // 完全透明，让 Mica 材质显示
+      }
+
+      const win = new BrowserWindow(windowConfig)
+
+      // Windows 11 应用窗口材质（与主窗口保持一致）
+      if (isWindows) {
+        this.applyWindowMaterial(win)
+      }
 
       // 窗口直接加载标题栏 HTML
       const titlebarUrl =
@@ -441,6 +474,24 @@ class DetachedWindowManager {
         app.dock?.show()
       } else {
         app.dock?.hide()
+      }
+    }
+  }
+
+  /**
+   * 更新所有分离窗口的材质
+   */
+  public async updateAllWindowsMaterial(material: 'mica' | 'acrylic' | 'none'): Promise<void> {
+    for (const [windowId, info] of this.detachedWindowMap.entries()) {
+      try {
+        // 更新主进程窗口材质
+        applyWindowMaterial(info.window, material)
+        console.log(`✅ 分离窗口 ${windowId} 材质已更新为 ${material}`)
+
+        // 通知渲染进程更新样式
+        info.window.webContents.send('update-window-material', material)
+      } catch (error) {
+        console.error(`❌ 更新分离窗口 ${windowId} 材质失败:`, error)
       }
     }
   }

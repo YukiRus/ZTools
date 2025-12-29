@@ -120,6 +120,37 @@ const searchInputRef = ref<HTMLInputElement | null>(null)
 
 // 初始化
 onMounted(() => {
+  // 检测操作系统并添加类名
+  const userAgent = navigator.userAgent.toLowerCase()
+  const osPlatform = navigator.platform.toLowerCase()
+
+  if (osPlatform.includes('win') || userAgent.includes('windows')) {
+    document.documentElement.classList.add('os-windows')
+  } else if (osPlatform.includes('mac') || userAgent.includes('mac')) {
+    document.documentElement.classList.add('os-mac')
+  }
+
+  // 初始化时获取当前窗口材质
+  if (window.ztools?.getWindowMaterial) {
+    window.ztools
+      .getWindowMaterial()
+      .then((material: string) => {
+        console.log('标题栏初始化材质:', material)
+        document.documentElement.setAttribute('data-material', material)
+      })
+      .catch((err: Error) => {
+        console.error('获取窗口材质失败:', err)
+      })
+  }
+
+  // 监听窗口材质更新
+  if (window.ztools?.onUpdateWindowMaterial) {
+    window.ztools.onUpdateWindowMaterial((material: 'mica' | 'acrylic' | 'none') => {
+      console.log('标题栏收到材质更新:', material)
+      document.documentElement.setAttribute('data-material', material)
+    })
+  }
+
   // 监听初始化事件（注意：preload 已经过滤掉了 event，第一个参数直接就是 data）
   window.electron.ipcRenderer.on('init-titlebar', (data: any) => {
     console.log('收到标题栏初始化数据:', data)
@@ -425,30 +456,32 @@ function sendArrowKeyToPlugin(key: string): void {
 /* Windows 窗口控制按钮 */
 .window-controls {
   display: flex;
+  gap: 4px;
   margin-left: 8px;
   -webkit-app-region: no-drag;
 }
 
 .window-btn {
-  width: 46px;
-  height: 52px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: transparent;
   border: none;
+  border-radius: 4px;
   color: var(--titlebar-icon);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .window-btn:hover {
-  background: var(--win-button-hover);
+  background: var(--hover-bg);
   color: var(--titlebar-icon-hover);
 }
 
 .window-btn.close-btn:hover {
-  background: var(--win-close-hover);
+  background: #ef4444;
   color: #ffffff;
 }
 </style>

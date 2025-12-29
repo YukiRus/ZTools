@@ -367,6 +367,11 @@ class PluginManager {
     return this.pluginViews.map((v) => ({ path: v.path, name: v.name }))
   }
 
+  // 获取所有插件视图
+  public getAllPluginViews(): Array<PluginViewInfo> {
+    return this.pluginViews
+  }
+
   // 通过 webContents 查找插件名称
   public getPluginNameByWebContents(webContents: any): string | null {
     const plugin = this.pluginViews.find((v) => v.view.webContents === webContents)

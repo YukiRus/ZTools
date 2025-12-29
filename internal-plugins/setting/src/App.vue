@@ -34,6 +34,32 @@ onMounted(() => {
   window.ztools.onPluginOut(() => {
     console.log('设置插件退出')
   })
+
+  // 检测操作系统并添加类名
+  const userAgent = navigator.userAgent.toLowerCase()
+  const platform = navigator.platform.toLowerCase()
+
+  if (platform.includes('win') || userAgent.includes('windows')) {
+    document.documentElement.classList.add('os-windows')
+  } else if (platform.includes('mac') || userAgent.includes('mac')) {
+    document.documentElement.classList.add('os-mac')
+  }
+
+  // 初始化时获取当前窗口材质
+  if (window.ztools.internal.getWindowMaterial) {
+    window.ztools.internal.getWindowMaterial().then((material) => {
+      console.log('设置插件初始化材质:', material)
+      document.documentElement.setAttribute('data-material', material)
+    })
+  }
+
+  // 监听窗口材质更新
+  if (window.ztools.internal.onUpdateWindowMaterial) {
+    window.ztools.internal.onUpdateWindowMaterial((material: 'mica' | 'acrylic' | 'none') => {
+      console.log('设置插件收到材质更新:', material)
+      document.documentElement.setAttribute('data-material', material)
+    })
+  }
 })
 </script>
 

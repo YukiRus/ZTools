@@ -2,6 +2,9 @@ import { ipcMain } from 'electron'
 import { MAX_WINDOW_HEIGHT, WINDOW_INITIAL_HEIGHT } from '../../common/constants.js'
 import windowManager from '../../managers/windowManager.js'
 
+// 窗口材质类型
+type WindowMaterial = 'mica' | 'acrylic' | 'none'
+
 /**
  * 窗口管理API - 主程序专用
  */
@@ -19,6 +22,7 @@ export class WindowAPI {
     ipcMain.on('hide-window', () => this.hideWindow())
     ipcMain.on('resize-window', (_event, height: number) => this.resizeWindow(height))
     ipcMain.handle('get-window-position', () => this.getWindowPosition())
+    ipcMain.handle('get-window-material', () => this.getWindowMaterial())
     ipcMain.on('set-window-position', (_event, x: number, y: number) =>
       this.setWindowPosition(x, y)
     )
@@ -115,6 +119,17 @@ export class WindowAPI {
   private setTrayIconVisible(visible: boolean): void {
     windowManager.setTrayIconVisible(visible)
     console.log('设置托盘图标可见性:', visible)
+  }
+
+  public setWindowMaterial(material: WindowMaterial): { success: boolean } {
+    const result = windowManager.setWindowMaterial(material)
+    console.log('设置窗口材质:', material, '结果:', result)
+    return result
+  }
+
+  public async getWindowMaterial(): Promise<WindowMaterial> {
+    const material = await windowManager.getWindowMaterial()
+    return material
   }
 
   private openSettings(): void {

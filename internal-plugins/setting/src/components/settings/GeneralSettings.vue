@@ -7,9 +7,7 @@
         <span class="setting-desc">设置全局快捷键来呼出应用</span>
       </div>
       <div class="setting-control">
-        <div class="hotkey-input" :class="{ recording: isRecording }" @click="startRecording">
-          {{ displayHotkey }}
-        </div>
+        <HotkeyInput v-model="hotkey" :platform="platform" @change="handleHotkeyChange" />
         <button
           v-if="hotkey !== defaultHotkey"
           class="btn btn-icon"
@@ -42,16 +40,14 @@
         <span class="setting-desc">调整窗口的透明度</span>
       </div>
       <div class="setting-control opacity-control">
-        <input
-          v-model.number="opacity"
-          type="range"
-          min="0.3"
-          max="1"
-          step="0.01"
-          class="opacity-slider"
-          @input="handleOpacityChange"
+        <Slider
+          v-model="opacity"
+          :min="0.3"
+          :max="1"
+          :step="0.01"
+          :formatter="(value) => `${Math.round(value * 100)}%`"
+          @change="handleOpacityChange"
         />
-        <span class="opacity-value">{{ Math.round(opacity * 100) }}%</span>
       </div>
     </div>
 
@@ -62,11 +58,7 @@
         <span class="setting-desc">选择应用的主题外观</span>
       </div>
       <div class="setting-control">
-        <select v-model="theme" class="select" @change="handleThemeChange">
-          <option value="system">跟随系统</option>
-          <option value="light">明亮</option>
-          <option value="dark">暗黑</option>
-        </select>
+        <Dropdown v-model="theme" :options="themeOptions" @change="handleThemeChange" />
       </div>
     </div>
 
@@ -102,6 +94,21 @@
           :value="customColor"
           class="color-picker-hidden"
           @input="handleCustomColorChange"
+        />
+      </div>
+    </div>
+
+    <!-- 窗口材质设置（仅 Windows） -->
+    <div v-if="platform === 'win32'" class="setting-item">
+      <div class="setting-label">
+        <span>窗口材质</span>
+        <span class="setting-desc">选择窗口背景材质效果（需要 Windows 11）</span>
+      </div>
+      <div class="setting-control">
+        <Dropdown
+          v-model="windowMaterial"
+          :options="windowMaterialOptions"
+          @change="handleWindowMaterialChange"
         />
       </div>
     </div>
@@ -193,13 +200,7 @@
         <span class="setting-desc">复制文本后在设定时间内打开窗口自动粘贴</span>
       </div>
       <div class="setting-control">
-        <select v-model="autoPaste" class="select" @change="handleAutoPasteChange">
-          <option value="off">关闭</option>
-          <option value="1s">1秒内</option>
-          <option value="3s">3秒内</option>
-          <option value="5s">5秒内</option>
-          <option value="10s">10秒内</option>
-        </select>
+        <Dropdown v-model="autoPaste" :options="autoPasteOptions" @change="handleAutoPasteChange" />
       </div>
     </div>
 
@@ -210,15 +211,7 @@
         <span class="setting-desc">窗口显示状态切换后自动清空搜索框内容的时间</span>
       </div>
       <div class="setting-control">
-        <select v-model="autoClear" class="select" @change="handleAutoClearChange">
-          <option value="immediately">立即</option>
-          <option value="1m">1分钟</option>
-          <option value="2m">2分钟</option>
-          <option value="3m">3分钟</option>
-          <option value="5m">5分钟</option>
-          <option value="10m">10分钟</option>
-          <option value="never">从不</option>
-        </select>
+        <Dropdown v-model="autoClear" :options="autoClearOptions" @change="handleAutoClearChange" />
       </div>
     </div>
 
@@ -262,9 +255,7 @@
         </div>
       </div>
       <div class="setting-control">
-        <button class="btn" :disabled="isCheckingUpdate" @click="handleCheckUpdate">
-          {{ isCheckingUpdate ? '检查中...' : '检查更新' }}
-        </button>
+        <button class="btn" @click="handleCheckUpdate">检查更新</button>
       </div>
     </div>
   </div>
@@ -272,17 +263,51 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import {
-  DEFAULT_PLACEHOLDER,
-  DEFAULT_AVATAR,
-  type AutoPasteOption,
-  type AutoClearOption,
-  type ThemeType,
-  type PrimaryColor
-} from '../../constants'
 import { useToast } from '../../composables/useToast'
+import {
+  DEFAULT_AVATAR,
+  DEFAULT_PLACEHOLDER,
+  type AutoClearOption,
+  type AutoPasteOption,
+  type PrimaryColor,
+  type ThemeType
+} from '../../constants'
+import Dropdown from '../common/Dropdown.vue'
+import HotkeyInput from '../common/HotkeyInput.vue'
+import Slider from '../common/Slider.vue'
 
-const { success, error, warning, info, confirm } = useToast()
+const { error, info, confirm } = useToast()
+
+// Dropdown 选项数据
+const themeOptions = [
+  { label: '跟随系统', value: 'system' },
+  { label: '明亮', value: 'light' },
+  { label: '暗黑', value: 'dark' }
+]
+
+const windowMaterialOptions = [
+  { label: 'Mica（云母）', value: 'mica' },
+  { label: 'Acrylic（亚克力）', value: 'acrylic' },
+  { label: '无', value: 'none' }
+]
+
+const autoPasteOptions = [
+  { label: '关闭', value: 'off' },
+  { label: '1秒内', value: '1s' },
+  { label: '3秒内', value: '3s' },
+  { label: '5秒内', value: '5s' },
+  { label: '10秒内', value: '10s' }
+]
+
+const autoClearOptions = [
+  { label: '立即', value: 'immediately' },
+  { label: '1分钟', value: '1m' },
+  { label: '2分钟', value: '2m' },
+  { label: '3分钟', value: '3m' },
+  { label: '5分钟', value: '5m' },
+  { label: '10分钟', value: '10m' },
+  { label: '从不', value: 'never' }
+]
 
 // 当前平台（与 window.ztools.getPlatform 返回类型保持一致）
 const platform = ref<'darwin' | 'win32' | 'linux'>('darwin')
@@ -302,8 +327,6 @@ const autoClear = ref<AutoClearOption>('immediately')
 
 // 实际快捷键字符串
 const hotkey = ref('')
-const isRecording = ref(false)
-const recordedKeys = ref<string[]>([])
 
 // 不透明度设置
 const opacity = ref(1)
@@ -313,6 +336,9 @@ const showTrayIcon = ref(true)
 
 // 开机启动设置
 const launchAtLogin = ref(false)
+
+// 窗口材质设置
+const windowMaterial = ref<'mica' | 'acrylic' | 'none'>('none')
 
 // 颜色选择器引用
 const colorPickerInput = ref<HTMLInputElement | null>(null)
@@ -340,123 +366,22 @@ const defaultAvatar = DEFAULT_AVATAR
 // 搜索框提示文字默认值
 const defaultPlaceholder = DEFAULT_PLACEHOLDER
 
-// 显示的快捷键文本
-const displayHotkey = computed(() => {
-  if (isRecording.value) {
-    return recordedKeys.value.length > 0 ? recordedKeys.value.join('+') : '请按下快捷键...'
-  }
-  return hotkey.value
-})
-
-// 开始录制快捷键
-async function startRecording(): Promise<void> {
-  isRecording.value = true
-  recordedKeys.value = []
-
-  // 请求后端注册临时快捷键监听
+// 处理快捷键变化
+async function handleHotkeyChange(newHotkey: string): Promise<void> {
   try {
-    const result = await window.ztools.internal.startHotkeyRecording()
+    // 调用 IPC 更新全局快捷键
+    const result = await window.ztools.internal.updateShortcut(newHotkey)
     if (result.success) {
-      console.log('已启动后端快捷键监听')
+      // 保存到数据库
+      await saveSettings()
+      console.log('新快捷键设置成功:', hotkey.value)
     } else {
-      console.warn('启动后端快捷键监听失败，使用前端监听:', result.error)
+      error(`快捷键设置失败: ${result.error || '未知错误'}`)
     }
-  } catch (error) {
-    console.error('启动后端快捷键监听异常，使用前端监听:', error)
+  } catch (err: any) {
+    console.error('设置快捷键失败:', err)
+    error(`设置快捷键失败: ${err.message || '未知错误'}`)
   }
-
-  // 同时监听前端键盘事件作为备用
-  document.addEventListener('keydown', handleKeyDown)
-  document.addEventListener('keyup', handleKeyUp)
-}
-
-// 停止录制
-function stopRecording(): void {
-  isRecording.value = false
-  document.removeEventListener('keydown', handleKeyDown)
-  document.removeEventListener('keyup', handleKeyUp)
-  // 后端会在快捷键触发时自动注销，无需手动调用
-}
-
-// 处理按键
-function handleKeyDown(e: KeyboardEvent): void {
-  e.preventDefault()
-  e.stopPropagation()
-
-  const keys: string[] = []
-
-  // 修饰键（根据平台区分 Alt 文案）
-  if (e.metaKey) keys.push('Command')
-  if (e.ctrlKey) keys.push('Ctrl')
-  if (e.altKey) keys.push(platform.value === 'win32' ? 'Alt' : 'Option')
-  if (e.shiftKey) keys.push('Shift')
-
-  // 主键 - 使用 e.code 避免 Option 键产生特殊字符
-  if (
-    e.code &&
-    ![
-      'MetaLeft',
-      'MetaRight',
-      'ControlLeft',
-      'ControlRight',
-      'AltLeft',
-      'AltRight',
-      'ShiftLeft',
-      'ShiftRight'
-    ].includes(e.code)
-  ) {
-    // 处理 e.code 转换为友好格式
-    let mainKey = ''
-
-    if (e.code.startsWith('Key')) {
-      // KeyA -> A, KeyB -> B
-      mainKey = e.code.replace('Key', '')
-    } else if (e.code.startsWith('Digit')) {
-      // Digit1 -> 1, Digit2 -> 2
-      mainKey = e.code.replace('Digit', '')
-    } else if (e.code.startsWith('Numpad')) {
-      // Numpad1 -> Numpad1
-      mainKey = e.code
-    } else {
-      // Space, Enter, Tab 等
-      mainKey = e.code
-    }
-
-    if (mainKey) {
-      keys.push(mainKey)
-    }
-  }
-
-  recordedKeys.value = keys
-}
-
-// 按键抬起时确认快捷键
-async function handleKeyUp(e: KeyboardEvent): Promise<void> {
-  e.preventDefault()
-  e.stopPropagation()
-
-  if (recordedKeys.value.length > 1) {
-    // 至少需要一个修饰键 + 一个主键
-    const newHotkey = recordedKeys.value.join('+')
-
-    try {
-      // 调用 IPC 更新全局快捷键
-      const result = await window.ztools.internal.updateShortcut(newHotkey)
-      if (result.success) {
-        hotkey.value = newHotkey
-        // 保存到数据库
-        await saveSettings()
-        console.log('新快捷键设置成功:', hotkey.value)
-      } else {
-        error(`快捷键设置失败: ${result.error || '未知错误'}`)
-      }
-    } catch (err: any) {
-      console.error('设置快捷键失败:', err)
-      error(`设置快捷键失败: ${err.message || '未知错误'}`)
-    }
-  }
-
-  stopRecording()
 }
 
 // 重置快捷键
@@ -662,6 +587,19 @@ async function handleTrayIconChange(): Promise<void> {
     console.log('托盘图标显示状态已更新:', showTrayIcon.value)
   } catch (error) {
     console.error('更新托盘图标显示状态失败:', error)
+  }
+}
+
+// 处理窗口材质变化
+async function handleWindowMaterialChange(): Promise<void> {
+  try {
+    await saveSettings()
+    // 调用主进程更新材质（会广播到主渲染进程）
+    await window.ztools.internal.setWindowMaterial(windowMaterial.value)
+    // 设置插件自己也需要更新 data-material 属性
+    document.documentElement.setAttribute('data-material', windowMaterial.value)
+  } catch (error) {
+    console.error('更新窗口材质失败:', error)
   }
 }
 
@@ -888,6 +826,7 @@ async function loadSettings(): Promise<void> {
       autoClear.value = data.autoClear ?? 'immediately'
       theme.value = data.theme ?? 'system'
       primaryColor.value = data.primaryColor ?? 'blue'
+      windowMaterial.value = data.windowMaterial ?? 'none'
 
       // 加载自定义颜色
       if (data.customColor) {
@@ -934,7 +873,8 @@ async function saveSettings(): Promise<void> {
       theme: theme.value,
       primaryColor: primaryColor.value,
       customColor: customColor.value,
-      showTrayIcon: showTrayIcon.value
+      showTrayIcon: showTrayIcon.value,
+      windowMaterial: windowMaterial.value
     })
   } catch (error) {
     console.error('保存设置失败:', error)
@@ -945,42 +885,7 @@ async function saveSettings(): Promise<void> {
 onMounted(() => {
   loadSettings()
   getAppVersion()
-
-  // 监听后端发送的快捷键录制事件
-  if (window.ztools.internal.onHotkeyRecorded) {
-    window.ztools.internal.onHotkeyRecorded((shortcut: string) => {
-      if (isRecording.value) {
-        console.log('收到后端快捷键录制事件:', shortcut)
-        // 直接设置快捷键，不需要等待 keyup
-        recordedKeys.value = shortcut.split('+')
-        handleHotkeyRecorded(shortcut)
-      }
-    })
-  }
 })
-
-// 处理后端传来的快捷键（立即确认）
-async function handleHotkeyRecorded(newHotkey: string): Promise<void> {
-  // 后端已经自动注销了临时快捷键，直接处理设置
-  try {
-    // 调用 IPC 更新全局快捷键
-    const result = await window.ztools.internal.updateShortcut(newHotkey)
-    if (result.success) {
-      hotkey.value = newHotkey
-      // 保存到数据库
-      await saveSettings()
-      console.log('新快捷键设置成功:', hotkey.value)
-    } else {
-      error(`快捷键设置失败: ${result.error || '未知错误'}`)
-    }
-  } catch (err: any) {
-    console.error('设置快捷键失败:', err)
-    error(`设置快捷键失败: ${err.message || '未知错误'}`)
-  }
-
-  // 停止前端录制状态
-  stopRecording()
-}
 </script>
 
 <style scoped>
@@ -1037,127 +942,15 @@ async function handleHotkeyRecorded(newHotkey: string): Promise<void> {
   gap: 10px;
 }
 
-/* 快捷键输入框 */
-.hotkey-input {
-  min-width: 150px;
-  padding: 8px 16px;
-  border: 2px solid var(--control-border);
-  border-radius: 6px;
-  background: var(--control-bg);
-  color: var(--text-color);
-  font-size: 14px;
-  font-weight: 500;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  user-select: none;
-}
-
-.hotkey-input:hover {
-  background: var(--hover-bg);
-  border-color: color-mix(in srgb, var(--primary-color), black 15%);
-}
-
-.hotkey-input.recording {
-  border-color: color-mix(in srgb, var(--primary-color), black 15%);
-  background: var(--primary-light-bg);
-  color: var(--primary-color);
-  animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
-}
-
 /* 不透明度控制 */
 .opacity-control {
   min-width: 250px;
   gap: 12px;
 }
 
-.opacity-value {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-color);
-  min-width: 45px;
-  text-align: right;
-}
-
-.opacity-slider {
-  flex: 1;
-  -webkit-appearance: none;
-  appearance: none;
-  height: 6px;
-  border-radius: 3px;
-  background: var(--control-bg);
-  border: 1px solid var(--control-border);
-  outline: none;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.opacity-slider:hover {
-  background: var(--hover-bg);
-  border-color: color-mix(in srgb, var(--primary-color), black 15%);
-}
-
-.opacity-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--primary-color);
-  cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  border: 2px solid white;
-}
-
-.opacity-slider::-webkit-slider-thumb:hover {
-  background: var(--primary-hover);
-  transform: scale(1.15);
-}
-
-.opacity-slider::-webkit-slider-thumb:active {
-  transform: scale(1.05);
-}
-
-.opacity-slider::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--primary-color);
-  cursor: pointer;
-  border: 2px solid white;
-  transition: all 0.2s;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.opacity-slider::-moz-range-thumb:hover {
-  background: var(--primary-hover);
-  transform: scale(1.15);
-}
-
-.opacity-slider::-moz-range-thumb:active {
-  transform: scale(1.05);
-}
-
-/* 文本输入框 */
-.input {
+/* 文本输入框 - 只设置布局，颜色由 global.css 控制 */
+:deep(.input) {
   min-width: 250px;
-  padding: 8px 12px;
-}
-
-.select {
-  min-width: 150px;
-  padding: 8px 12px;
 }
 
 /* 头像控制 */

@@ -58,6 +58,39 @@ body::-webkit-scrollbar {
   --bg-color: #f4f4f44f;
 }
 
+/* Windows 下默认使用普通背景色 */
+.os-windows:root {
+  --bg-color: #f4f4f4;
+}
+
+/* Windows 下根据 data-material 属性应用不同材质样式 */
+.os-windows[data-material='mica'] {
+  --bg-color: transparent;
+  --card-bg: rgba(255, 255, 255, 0.5); /* 增加白度，更实一点 */
+  --control-bg: rgba(255, 255, 255, 0.6); /* 输入框背景更明显 */
+  --hover-bg: rgba(0, 0, 0, 0.04);
+  --active-bg: rgba(0, 0, 0, 0.06);
+  --divider-color: rgba(0, 0, 0, 0.06);
+  --highlight-color: rgba(234, 88, 12, 0.9);
+}
+
+.os-windows[data-material='acrylic'] {
+  --bg-color: transparent;
+  --card-bg: rgba(255, 255, 255, 0.3);
+  --control-bg: rgba(255, 255, 255, 0.25);
+  --hover-bg: rgba(0, 0, 0, 0.05);
+  --active-bg: rgba(0, 0, 0, 0.08);
+  --divider-color: rgba(0, 0, 0, 0.06);
+  --control-border: rgba(0, 0, 0, 0.15);
+  --highlight-color: rgba(234, 88, 12, 0.9);
+}
+
+.os-windows[data-material='none'] {
+  --bg-color: #f4f4f4;
+  --card-bg: white;
+  --control-bg: white;
+}
+
 /* 主题色定义 - 亮色模式 */
 :root,
 .theme-blue {
@@ -123,6 +156,39 @@ body::-webkit-scrollbar {
     --bg-color: #3031334f;
   }
 
+  /* Windows 暗色模式下默认使用普通背景色 */
+  .os-windows:root {
+    --bg-color: #303133;
+  }
+
+  /* Windows 暗色模式下根据 data-material 属性应用不同材质样式 */
+  .os-windows[data-material='mica'] {
+    --bg-color: transparent;
+    --card-bg: rgba(255, 255, 255, 0.04);
+    --control-bg: rgba(255, 255, 255, 0.06);
+    --hover-bg: rgba(255, 255, 255, 0.05);
+    --active-bg: rgba(255, 255, 255, 0.08);
+    --divider-color: rgba(255, 255, 255, 0.08);
+    --highlight-color: rgba(251, 146, 60, 0.85);
+  }
+
+  .os-windows[data-material='acrylic'] {
+    --bg-color: transparent;
+    --card-bg: rgba(255, 255, 255, 0.02);
+    --control-bg: rgba(255, 255, 255, 0.04);
+    --hover-bg: rgba(255, 255, 255, 0.05);
+    --active-bg: rgba(255, 255, 255, 0.08);
+    --divider-color: rgba(255, 255, 255, 0.06);
+    --control-border: rgba(255, 255, 255, 0.15);
+    --highlight-color: rgba(251, 146, 60, 0.85);
+  }
+
+  .os-windows[data-material='none'] {
+    --bg-color: #303133;
+    --card-bg: #3a3a3c;
+    --control-bg: #48484a;
+  }
+
   /* 主题色定义 - 暗色模式 */
   /* 主题色定义 - 暗色模式 */
   :root,
@@ -171,6 +237,10 @@ body {
   /* 必须定义在 body 上，以便在 theme-xxx 类改变 --primary-color 时重新计算 */
   --primary-hover: color-mix(in srgb, var(--primary-color), black 10%);
   --primary-light-bg: color-mix(in srgb, var(--primary-color), white 80%);
+}
+
+/* 默认的 active-bg 和 hover-bg（非 Windows 材质模式） */
+html:not(.os-windows[data-material='mica']):not(.os-windows[data-material='acrylic']) body {
   --active-bg: color-mix(in srgb, var(--primary-color) 20%, white);
   --hover-bg: color-mix(in srgb, var(--primary-color) 12%, white);
 }
@@ -197,6 +267,10 @@ body {
     /* 暗色模式下的计算逻辑 */
     --primary-hover: color-mix(in srgb, var(--primary-color), white 10%);
     --primary-light-bg: color-mix(in srgb, var(--primary-color), transparent 92%);
+  }
+
+  /* 暗色模式下默认的 active-bg 和 hover-bg（非 Windows 材质模式） */
+  html:not(.os-windows[data-material='mica']):not(.os-windows[data-material='acrylic']) body {
     --active-bg: color-mix(in srgb, var(--primary-color) 12%, #303133);
     --hover-bg: color-mix(in srgb, var(--primary-color) 5%, #303133);
   }
@@ -217,7 +291,7 @@ body {
 
 /* 按钮基础类 */
 .btn {
-  padding: 8px 16px;
+  padding: 6px 16px;
   border: 2px solid var(--control-border);
   border-radius: 6px;
   background: var(--control-bg);
@@ -288,15 +362,23 @@ body {
 
 /* 按钮类型变体 - 默认悬浮时显示主题色 */
 .btn:hover:not(:disabled) {
-  background: var(--primary-light-bg);
+  background: var(--hover-bg);
   border-color: color-mix(in srgb, var(--primary-color), black 15%);
   color: var(--primary-color);
 }
 
+.btn:active:not(:disabled) {
+  background: var(--active-bg);
+}
+
 .btn-primary:hover:not(:disabled) {
-  background: var(--primary-light-bg);
+  background: var(--hover-bg);
   border-color: color-mix(in srgb, var(--primary-color), black 15%);
   color: var(--primary-color);
+}
+
+.btn-primary:active:not(:disabled) {
+  background: var(--active-bg);
 }
 
 .btn-danger:hover:not(:disabled) {
@@ -323,23 +405,49 @@ body {
   color: var(--purple-color);
 }
 
-/* 实心按钮变体 - 默认就使用主题色 */
+/* 实心按钮变体 - 默认使用实心主题色，符合控件设计规范 */
 .btn-solid {
-  background: color-mix(in srgb, var(--primary-color), black 15%);
-  border-color: color-mix(in srgb, var(--primary-color), black 25%);
+  background: var(--primary-color);
+  border: 2px solid var(--primary-color);
+  border-radius: 6px;
+  padding: 6px 16px;
   color: #ffffff;
+  font-weight: 500;
 }
 
 .btn-solid:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--primary-color), black 25%);
-  border-color: color-mix(in srgb, var(--primary-color), black 35%);
+  background: color-mix(in srgb, var(--primary-color), black 10%);
+  border-color: color-mix(in srgb, var(--primary-color), black 10%);
   color: #ffffff;
+}
+
+.btn-solid:active:not(:disabled) {
+  background: color-mix(in srgb, var(--primary-color), black 20%);
+  border-color: color-mix(in srgb, var(--primary-color), black 20%);
+}
+
+/* Acrylic 材质模式下使用透明风格 */
+.os-windows[data-material='acrylic'] .btn-solid {
+  background: var(--control-bg);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.os-windows[data-material='acrylic'] .btn-solid:hover:not(:disabled) {
+  background: var(--hover-bg);
+  border-color: color-mix(in srgb, var(--primary-color), black 15%);
+  color: var(--primary-color);
+}
+
+.os-windows[data-material='acrylic'] .btn-solid:active:not(:disabled) {
+  background: var(--active-bg);
 }
 
 /* 输入框基础类 */
 .input {
   width: 100%;
-  padding: 10px 16px;
+  padding: 6px 16px;
   border: 2px solid var(--control-border);
   border-radius: 6px;
   font-size: 14px;
@@ -355,17 +463,19 @@ body {
 
 .input:hover {
   background: var(--hover-bg);
+  border-color: color-mix(in srgb, var(--primary-color), black 15%);
 }
 
 .input:focus {
-  background: var(--primary-light-bg);
+  background: var(--active-bg);
   border-color: color-mix(in srgb, var(--primary-color), black 15%);
+  box-shadow: 0 0 0 3px var(--primary-light-bg);
 }
 
 /* 下拉框 */
 .select {
   width: 100%;
-  padding: 10px 16px;
+  padding: 6px 16px;
   border: 2px solid var(--control-border);
   border-radius: 6px;
   font-size: 14px;
@@ -378,13 +488,14 @@ body {
 }
 
 .select:hover {
-  background: var(--primary-light-bg);
+  background: var(--hover-bg);
   border-color: color-mix(in srgb, var(--primary-color), black 15%);
 }
 
 .select:focus {
-  background: var(--primary-light-bg);
+  background: var(--active-bg);
   border-color: color-mix(in srgb, var(--primary-color), black 15%);
+  box-shadow: 0 0 0 3px var(--primary-light-bg);
 }
 
 .select option {
@@ -483,6 +594,15 @@ body {
 
 .card.clickable {
   cursor: pointer;
+}
+
+/* macOS 风格毛玻璃效果 - 仅 Acrylic 模式 */
+.os-windows[data-material='acrylic'] .card,
+.os-windows[data-material='acrylic'] .btn,
+.os-windows[data-material='acrylic'] .input,
+.os-windows[data-material='acrylic'] .select {
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
 }
 
 /* 全局自适应图标样式 - 主题色渐变 */

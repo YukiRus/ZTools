@@ -475,6 +475,20 @@ onMounted(async () => {
     }
   })
 
+  // 初始化时获取当前窗口材质
+  if (window.ztools.getWindowMaterial) {
+    window.ztools.getWindowMaterial().then((material) => {
+      console.log('主渲染进程初始化材质:', material)
+      document.documentElement.setAttribute('data-material', material)
+    })
+  }
+
+  // 监听窗口材质更新事件
+  window.ztools.onUpdateWindowMaterial?.((material: 'mica' | 'acrylic' | 'none') => {
+    console.log('更新窗口材质:', material)
+    document.documentElement.setAttribute('data-material', material)
+  })
+
   // 监听应用启动事件（应用启动后）
   window.ztools.onAppLaunched(() => {
     console.log('应用已启动')
@@ -565,6 +579,7 @@ onUnmounted(() => {
   background: var(--bg-color);
   outline: none;
   overflow: hidden; /* 隐藏所有滚动条 */
+  border-radius: 8px; /* Windows 11 圆角 */
 }
 
 .search-window {
@@ -574,6 +589,7 @@ onUnmounted(() => {
   flex-direction: column;
   background: var(--bg-color);
   overflow: hidden; /* 隐藏所有滚动条 */
+  border-radius: 8px; /* Windows 11 圆角 */
 }
 
 .search-box-wrapper {
@@ -583,7 +599,7 @@ onUnmounted(() => {
 .plugin-placeholder {
   flex: 1;
   /* min-height: 500px; */
-  background: var(--hover-bg);
+  background: transparent; /* 透明背景，让下方的 BrowserView 和 Mica 材质显示 */
   -webkit-app-region: no-drag; /* 禁止拖动窗口 */
   user-select: none; /* 禁止选取文本 */
 }

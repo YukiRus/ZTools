@@ -25,6 +25,7 @@ const api = {
   setWindowPosition: (x: number, y: number) => ipcRenderer.send('set-window-position', x, y),
   setWindowSizeLock: (lock: boolean) => ipcRenderer.send('set-window-size-lock', lock),
   setWindowOpacity: (opacity: number) => ipcRenderer.send('set-window-opacity', opacity),
+  getWindowMaterial: () => ipcRenderer.invoke('get-window-material'),
   setTrayIconVisible: (visible: boolean) => ipcRenderer.invoke('set-tray-icon-visible', visible),
   setLaunchAtLogin: (enable: boolean) => ipcRenderer.invoke('set-launch-at-login', enable),
   getLaunchAtLogin: () => ipcRenderer.invoke('get-launch-at-login'),
@@ -132,6 +133,9 @@ const api = {
     callback: (data: { primaryColor: string; customColor?: string }) => void
   ) => {
     ipcRenderer.on('update-primary-color', (_event, data) => callback(data))
+  },
+  onUpdateWindowMaterial: (callback: (material: 'mica' | 'none') => void) => {
+    ipcRenderer.on('update-window-material', (_event, material) => callback(material))
   },
   onIpcLaunch: (
     callback: (options: {
@@ -254,6 +258,7 @@ declare global {
       hideWindow: () => void
       resizeWindow: (height: number) => void
       setWindowOpacity: (opacity: number) => void
+      getWindowMaterial: () => Promise<'mica' | 'acrylic' | 'none'>
       setTrayIconVisible: (visible: boolean) => Promise<void>
       setLaunchAtLogin: (enable: boolean) => Promise<void>
       getLaunchAtLogin: () => Promise<boolean>

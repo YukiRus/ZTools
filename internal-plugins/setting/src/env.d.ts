@@ -110,6 +110,9 @@ declare global {
 
         // 窗口和设置
         setWindowOpacity: (opacity: number) => Promise<void>
+        setWindowMaterial: (material: 'mica' | 'acrylic' | 'none') => Promise<{ success: boolean }>
+        getWindowMaterial: () => Promise<'mica' | 'acrylic' | 'none'>
+        onUpdateWindowMaterial: (callback: (material: 'mica' | 'acrylic' | 'none') => void) => void
         updatePlaceholder: (placeholder: string) => Promise<void>
         selectAvatar: () => Promise<{ success: boolean; path?: string; error?: string }>
         updateAvatar: (avatar: string) => Promise<void>
