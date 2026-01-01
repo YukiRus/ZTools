@@ -113,7 +113,7 @@ ZTools 支持应用内一键更新，无需手动下载安装包：
 - 更新包格式：ZIP 压缩包，包含新版本的 `app.asar` 文件
 - 更新程序：独立的 `ztools-updater` 可执行文件
   - macOS: `ztools-updater`（位于 Contents/MacOS/）
-  - Windows: `ztools-updater.exe`（位于应用根目录）
+  - Windows: `ztools-agent.exe`（位于应用根目录）
 - 更新流程：
   1. 下载并解压更新包
   2. 启动独立的 updater 程序

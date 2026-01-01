@@ -690,7 +690,7 @@ updater 重启应用
 
 - 独立的可执行文件（非 Node.js，避免依赖主应用）
 - macOS: `ztools-updater`（位于 `Contents/MacOS/`）
-- Windows: `ztools-updater.exe`（位于应用根目录）
+- Windows: `ztools-agent.exe`（位于应用根目录）
 - 职责：
   1. 等待主应用完全退出
   2. 复制新的 `app.asar` 和 `app.asar.unpacked` 到应用目录
@@ -706,7 +706,7 @@ updater 重启应用
 
 - **Windows**：
   - app.asar 位置：`resources/app.asar`
-  - updater 位置：应用根目录 `ztools-updater.exe`
+  - updater 位置：应用根目录 `ztools-agent.exe`
   - 应用路径：`ZTools.exe`
 
 **更新信息文件格式**（`ztools_update_x.x.x.txt`）：
@@ -802,10 +802,10 @@ updater 重启应用
 - `src/renderer/src/components/Settings.vue` - 设置界面（包含更新检查）
 - `src/updater/` - 独立更新程序源码（如果有）
   - `mac-arm64/ztools-updater` - macOS 更新程序
-  - `win-x64/ztools-updater.exe` - Windows 更新程序
+  - `win-x64/ztools-agent.exe` - Windows 更新程序
 - `resources/` - 打包后的更新程序位置
   - macOS: 复制到 `Contents/MacOS/ztools-updater`
-  - Windows: 复制到应用根目录 `ztools-updater.exe`
+  - Windows: 复制到应用根目录 `ztools-agent.exe`
 
 ## 常见任务指南
 

@@ -158,14 +158,14 @@ module.exports = async function (context) {
       // Actually my previous ls command showed `win-amd64`.
       // Let's assume 64bit build for now or check.
       // Usually user builds for x64.
-      const src = path.join(updaterDir, 'win-amd64', 'ztools-updater.exe')
-      const dest = path.join(context.appOutDir, 'ztools-updater.exe')
+      const src = path.join(updaterDir, 'win-amd64', 'ztools-agent.exe')
+      const dest = path.join(context.appOutDir, 'ztools-agent.exe')
 
       if (await fs.pathExists(src)) {
         await fs.copy(src, dest)
-        console.log(`已复制 updater 到: ${dest}`)
+        console.log(`已复制 agent 到: ${dest}`)
       } else {
-        console.error(`未找到 updater 文件: ${src}`)
+        console.error(`未找到 agent 文件: ${src}`)
       }
     }
   } catch (err) {

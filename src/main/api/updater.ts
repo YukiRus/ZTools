@@ -229,7 +229,7 @@ export class UpdaterAPI {
       asarDst = path.join(resourcesDir, 'app.asar')
       unpackedDst = path.join(resourcesDir, 'app.asar.unpacked')
     } else if (isWin) {
-      updaterPath = path.join(path.dirname(appPath), 'ztools-updater.exe')
+      updaterPath = path.join(path.dirname(appPath), 'ztools-agent.exe')
       const resourcesDir = path.join(path.dirname(appPath), 'resources')
 
       asarDst = path.join(resourcesDir, 'app.asar')

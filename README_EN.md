@@ -113,7 +113,7 @@ ZTools supports one-click in-app updates without manual download:
 - Update package format: ZIP archive containing new version's `app.asar` file
 - Updater program: Independent `ztools-updater` executable
   - macOS: `ztools-updater` (located in Contents/MacOS/)
-  - Windows: `ztools-updater.exe` (located in app root directory)
+  - Windows: `ztools-agent.exe` (located in app root directory)
 - Update flow:
   1. Download and extract update package
   2. Launch independent updater program
