@@ -117,6 +117,50 @@ const pluginLogo = ref<string | undefined>(undefined)
 const searchQuery = ref('')
 const isPinned = ref(false)
 const searchInputRef = ref<HTMLInputElement | null>(null)
+const acrylicLightOpacity = ref(78) // 亚克力明亮模式透明度（默认 78%）
+const acrylicDarkOpacity = ref(50) // 亚克力暗黑模式透明度（默认 50%）
+
+// 应用亚克力背景色叠加效果
+function applyAcrylicOverlay(): void {
+  // 移除旧的样式
+  const existingStyle = document.getElementById('acrylic-overlay-style')
+  if (existingStyle) {
+    existingStyle.remove()
+  }
+
+  // 获取当前窗口材质
+  const material = document.documentElement.getAttribute('data-material')
+
+  // 只在亚克力材质时添加样式
+  if (material === 'acrylic') {
+    const style = document.createElement('style')
+    style.id = 'acrylic-overlay-style'
+    style.textContent = `
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: -1;
+      }
+
+      /* 明亮模式 */
+      @media (prefers-color-scheme: light) {
+        body::after {
+          background: rgb(255 255 255 / ${acrylicLightOpacity.value}%);
+        }
+      }
+
+      /* 暗黑模式 */
+      @media (prefers-color-scheme: dark) {
+        body::after {
+          background: rgb(0 0 0 / ${acrylicDarkOpacity.value}%);
+        }
+      }
+    `
+    document.head.appendChild(style)
+  }
+}
 
 // 初始化
 onMounted(() => {
@@ -137,6 +181,8 @@ onMounted(() => {
       .then((material: string) => {
         console.log('标题栏初始化材质:', material)
         document.documentElement.setAttribute('data-material', material)
+        // 应用亚克力背景色叠加效果
+        applyAcrylicOverlay()
       })
       .catch((err: Error) => {
         console.error('获取窗口材质失败:', err)
@@ -148,6 +194,19 @@ onMounted(() => {
     window.ztools.onUpdateWindowMaterial((material: 'mica' | 'acrylic' | 'none') => {
       console.log('标题栏收到材质更新:', material)
       document.documentElement.setAttribute('data-material', material)
+      // 应用亚克力背景色叠加效果
+      applyAcrylicOverlay()
+    })
+  }
+
+  // 监听亚克力透明度更新事件
+  if (window.ztools?.onUpdateAcrylicOpacity) {
+    window.ztools.onUpdateAcrylicOpacity((data: { lightOpacity: number; darkOpacity: number }) => {
+      console.log('标题栏更新亚克力透明度:', data)
+      acrylicLightOpacity.value = data.lightOpacity
+      acrylicDarkOpacity.value = data.darkOpacity
+      // 应用亚克力背景色叠加效果
+      applyAcrylicOverlay()
     })
   }
 
