@@ -2,6 +2,8 @@
 
 <div align="center">
 
+<img src="./.github/assets/icon.png" alt="ZTools Logo" width="120">
+
 **A High-Performance, Extensible Application Launcher and Plugin Platform**
 
 _Open Source Implementation of uTools | Supports macOS and Windows_

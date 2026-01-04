@@ -2,6 +2,8 @@
 
 <div align="center">
 
+<img src="./.github/assets/icon.png" alt="ZTools Logo" width="120">
+
 **一个高性能、可扩展的应用启动器和插件平台**
 
 _uTools 的开源实现 | 支持 macOS 和 Windows_
