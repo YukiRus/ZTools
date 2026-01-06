@@ -54,27 +54,27 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup lang="ts" generic="T extends string | number">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
-interface DropdownOption {
+interface DropdownOption<T> {
   label: string
-  value: string
+  value: T
 }
 
-interface Props {
-  modelValue: string
-  options: DropdownOption[]
+interface Props<T> {
+  modelValue: T
+  options: DropdownOption<T>[]
   placeholder?: string
 }
 
-const props = withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props<T>>(), {
   placeholder: '请选择'
 })
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', value: string): void
-  (e: 'change', value: string): void
+  (e: 'update:modelValue', value: T): void
+  (e: 'change', value: T): void
 }>()
 
 const isOpen = ref(false)
@@ -92,7 +92,7 @@ function toggleDropdown(): void {
 }
 
 // 选择选项
-function selectOption(option: DropdownOption): void {
+function selectOption(option: DropdownOption<T>): void {
   emit('update:modelValue', option.value)
   emit('change', option.value)
   isOpen.value = false

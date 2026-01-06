@@ -43,12 +43,7 @@
       <!-- 同步间隔 -->
       <div class="setting-item">
         <label class="setting-label">同步间隔</label>
-        <select v-model.number="config.syncInterval" class="select">
-          <option :value="300">5 分钟</option>
-          <option :value="600">10 分钟</option>
-          <option :value="1800">30 分钟</option>
-          <option :value="3600">1 小时</option>
-        </select>
+        <Dropdown v-model="config.syncInterval" :options="syncIntervalOptions" />
       </div>
 
       <!-- 操作按钮 -->
@@ -109,8 +104,17 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useToast } from '../../composables/useToast'
+import Dropdown from '../common/Dropdown.vue'
 
 const { success, error, warning, confirm } = useToast()
+
+// 同步间隔选项
+const syncIntervalOptions = [
+  { label: '5 分钟', value: 300 },
+  { label: '10 分钟', value: 600 },
+  { label: '30 分钟', value: 1800 },
+  { label: '1 小时', value: 3600 }
+]
 
 // 同步配置
 const syncEnabled = ref(false)
