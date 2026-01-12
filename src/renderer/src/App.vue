@@ -146,18 +146,19 @@ function handleComposing(composing: boolean): void {
 
 // 将浏览器 KeyboardEvent 转换为 Electron KeyboardInputEvent 格式
 function convertToElectronKeyboardEvent(
-  direction: 'left' | 'right' | 'up' | 'down',
+  direction: 'left' | 'right' | 'up' | 'down' | 'enter',
   type: 'keyDown' | 'keyUp' = 'keyDown'
 ): {
   type: 'keyDown' | 'keyUp'
   keyCode: string
 } {
-  // 映射方向键的 keyCode
+  // 映射方向键和回车键的 keyCode
   const keyCodeMap: Record<string, string> = {
     left: 'Left',
     right: 'Right',
     up: 'Up',
-    down: 'Down'
+    down: 'Down',
+    enter: 'Return'
   }
 
   return {
@@ -169,7 +170,7 @@ function convertToElectronKeyboardEvent(
 // 处理方向键事件
 async function handleArrowKeydown(
   event: KeyboardEvent,
-  direction: 'left' | 'right' | 'up' | 'down'
+  direction: 'left' | 'right' | 'up' | 'down' | 'enter'
 ): Promise<void> {
   // 只在插件模式下转发方向键事件
   if (currentView.value !== ViewMode.Plugin || !windowStore.currentPlugin) {

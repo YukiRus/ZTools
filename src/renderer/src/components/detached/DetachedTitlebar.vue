@@ -416,6 +416,13 @@ function handleKeydown(event: KeyboardEvent): void {
     return
   }
 
+  // 回车键传递给插件
+  if (event.key === 'Enter') {
+    event.preventDefault()
+    sendKeyToPlugin('Enter')
+    return
+  }
+
   // 上下左右方向键传递给插件
   if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
     // 上下方向键阻止默认行为并发送给插件
@@ -452,6 +459,22 @@ function sendArrowKeyToPlugin(key: string): void {
       })
     }, 10)
   }
+}
+
+// 发送按键到插件（用于回车键等）
+function sendKeyToPlugin(key: string): void {
+  // 发送 keyDown 事件
+  window.electron.ipcRenderer.send('send-arrow-key', {
+    type: 'keyDown',
+    keyCode: key
+  })
+  // 短暂延迟后发送 keyUp 事件
+  setTimeout(() => {
+    window.electron.ipcRenderer.send('send-arrow-key', {
+      type: 'keyUp',
+      keyCode: key
+    })
+  }, 10)
 }
 </script>
 

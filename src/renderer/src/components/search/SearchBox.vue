@@ -91,6 +91,7 @@
           @keydown.right="(e) => keydownEvent(e, 'right')"
           @keydown.down="(e) => keydownEvent(e, 'down')"
           @keydown.up="(e) => keydownEvent(e, 'up')"
+          @keydown.enter="(e) => keydownEvent(e, 'enter')"
           @paste="handlePaste"
         />
       </div>
@@ -174,7 +175,7 @@ const emit = defineEmits<{
   (e: 'update:pastedFiles', value: FileItem[] | null): void
   (e: 'update:pastedText', value: string | null): void
   (e: 'keydown', event: KeyboardEvent): void
-  (e: 'arrow-keydown', event: KeyboardEvent, direction: 'left' | 'right' | 'up' | 'down'): void
+  (e: 'arrow-keydown', event: KeyboardEvent, direction: 'left' | 'right' | 'up' | 'down' | 'enter'): void
   (e: 'composing', isComposing: boolean): void
   (e: 'settings-click'): void
 }>()
@@ -334,7 +335,7 @@ function onKeydown(event: KeyboardEvent): void {
   emit('keydown', event)
 }
 
-function keydownEvent(event: KeyboardEvent, direction: 'left' | 'right' | 'up' | 'down'): void {
+function keydownEvent(event: KeyboardEvent, direction: 'left' | 'right' | 'up' | 'down' | 'enter'): void {
   // 如果正在输入法组合中,不触发键盘事件
   if (isComposing.value) {
     return
