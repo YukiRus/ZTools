@@ -79,7 +79,11 @@ export function generateDownloadLinksMarkdown(downloadUrl, version) {
 
   links += '#### macOS 11+ (Apple Silicon)：\n\n'
   links += `- DMG：[ZTools-${version}-arm64.dmg](${downloadUrl}/ZTools-${version}-arm64.dmg)\n`
-  links += `- ZIP：[ZTools-${version}-arm64.zip](${downloadUrl}/ZTools-${version}-arm64.zip)\n`
+  links += `- ZIP：[ZTools-${version}-arm64.zip](${downloadUrl}/ZTools-${version}-arm64.zip)\n\n`
+
+  links += '#### macOS 10.13+ (Intel)：\n\n'
+  links += `- DMG：[ZTools-${version}-x64.dmg](${downloadUrl}/ZTools-${version}-x64.dmg)\n`
+  links += `- ZIP：[ZTools-${version}-x64.zip](${downloadUrl}/ZTools-${version}-x64.zip)\n`
 
   return links
 }

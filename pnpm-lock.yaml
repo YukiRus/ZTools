@@ -69,6 +69,9 @@ importers:
       '@electron-toolkit/tsconfig':
         specifier: ^2.0.0
         version: 2.0.0(@types/node@22.19.3)
+      '@lmdb/lmdb-darwin-x64':
+        specifier: ^3.4.4
+        version: 3.4.4
       '@types/marked':
         specifier: ^5.0.2
         version: 5.0.2
@@ -3539,8 +3542,7 @@ snapshots:
   '@lmdb/lmdb-darwin-arm64@3.4.4':
     optional: true
 
-  '@lmdb/lmdb-darwin-x64@3.4.4':
-    optional: true
+  '@lmdb/lmdb-darwin-x64@3.4.4': {}
 
   '@lmdb/lmdb-linux-arm64@3.4.4':
     optional: true
