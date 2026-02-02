@@ -218,17 +218,6 @@ class WindowManager {
       this.isRestoringFocus = false
     })
 
-    // 监听窗口大小变化
-    this.mainWindow.on('resize', () => {
-      if (this.mainWindow) {
-        const [width, height] = this.mainWindow.getSize()
-        // 如果当前有插件正在显示，同步更新插件视图大小
-        if (pluginManager.getCurrentPluginPath()) {
-          pluginManager.updatePluginViewBounds(width, height)
-        }
-      }
-    })
-
     // 阻止窗口被销毁（Command+W 时隐藏而不是关闭）
     this.mainWindow.on('close', (event) => {
       if (!this.isQuitting) {
