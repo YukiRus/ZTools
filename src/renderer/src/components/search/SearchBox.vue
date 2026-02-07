@@ -148,17 +148,12 @@
             <!-- AI 文字 -->
             <div class="ai-text">AI</div>
             <!-- 发送状态：同心圆向外扩散 -->
-            <div v-if="windowStore.aiRequestStatus === 'sending'" class="ai-ripple-container">
-              <div class="ai-ripple"></div>
-              <!-- <div class="ai-ripple" style="animation-delay: 0.3s"></div> -->
-              <div class="ai-ripple" style="animation-delay: 0.6s"></div>
-            </div>
+            <div v-if="windowStore.aiRequestStatus === 'sending'" class="ai-ripple-container"></div>
             <!-- 接收状态：边缘向内收缩 -->
-            <div v-if="windowStore.aiRequestStatus === 'receiving'" class="ai-pulse-container">
-              <div class="ai-pulse"></div>
-              <!-- <div class="ai-pulse" style="animation-delay: 0.3s"></div> -->
-              <div class="ai-pulse" style="animation-delay: 0.6s"></div>
-            </div>
+            <div
+              v-if="windowStore.aiRequestStatus === 'receiving'"
+              class="ai-pulse-container"
+            ></div>
           </div>
           <AdaptiveIcon
             :src="avatarUrl"
@@ -1328,7 +1323,7 @@ defineExpose({
 /* 暗色模式下使用黑色蒙版 */
 @media (prefers-color-scheme: dark) {
   .ai-mask {
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.3);
   }
 }
 
@@ -1345,69 +1340,85 @@ defineExpose({
   letter-spacing: 0.5px;
 }
 
-/* 发送状态：同心圆向外扩散 */
+/* 发送状态：从小到大扩散 */
 .ai-ripple-container {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
+  display: inline-block;
   z-index: 2;
 }
 
-.ai-ripple {
-  position: absolute;
-  top: 0;
-  left: 0;
+.ai-ripple-container::after,
+.ai-ripple-container::before {
+  content: '';
+  box-sizing: border-box;
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  border: 1px solid var(--primary-color);
-  opacity: 0;
-  animation: ripple-out 1.5s ease-out infinite;
+  border: 2px solid var(--primary-color);
+  position: absolute;
+  left: 0;
+  top: 0;
+  animation: animloader-sending 2s linear infinite;
+  animation-fill-mode: backwards;
 }
 
-@keyframes ripple-out {
+.ai-ripple-container::after {
+  animation-delay: 1s;
+}
+
+@keyframes animloader-sending {
   0% {
-    transform: scale(0.3);
+    transform: scale(0);
     opacity: 1;
   }
   100% {
-    transform: scale(1.2);
-    opacity: 0.3;
+    transform: scale(1);
+    opacity: 0;
   }
 }
 
-/* 接收状态：边缘向内收缩 */
+/* 接收状态：从大到小收缩 */
 .ai-pulse-container {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
+  display: inline-block;
   z-index: 2;
 }
 
-.ai-pulse {
-  position: absolute;
-  top: 0;
-  left: 0;
+.ai-pulse-container::after,
+.ai-pulse-container::before {
+  content: '';
+  box-sizing: border-box;
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  border: 1px solid var(--primary-color);
-  opacity: 0;
-  animation: pulse-in 1.5s ease-in-out infinite;
+  border: 2px solid var(--primary-color);
+  position: absolute;
+  left: 0;
+  top: 0;
+  animation: animloader-receiving 2s linear infinite;
+  animation-fill-mode: backwards;
 }
 
-@keyframes pulse-in {
+.ai-pulse-container::after {
+  animation-delay: 1s;
+}
+
+@keyframes animloader-receiving {
   0% {
-    transform: scale(1.2);
-    opacity: 0.8;
+    transform: scale(1);
+    opacity: 0;
   }
   100% {
     transform: scale(0);
-    opacity: 0.3;
+    opacity: 1;
   }
 }
 </style>
