@@ -22,8 +22,7 @@ interface UpdatePaths {
  * 升级管理 API
  */
 export class UpdaterAPI {
-  private latestYmlUrl =
-    'https://ztools-center.oss-cn-beijing.aliyuncs.com/updater/latest.yml'
+  private latestYmlUrl = 'https://ztools-center.oss-cn-beijing.aliyuncs.com/updater/latest.yml'
   private mainWindow: BrowserWindow | null = null
   private checkTimer: NodeJS.Timeout | null = null
   private downloadedUpdateInfo: any = null

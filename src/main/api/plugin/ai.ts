@@ -147,17 +147,15 @@ class PluginAiAPI {
     })
 
     // Function Calling - 调用插件函数
-    ipcMain.handle(
-      'plugin:ai-call-function',
-      async (event, functionName: string, args: string) => {
-        try {
-          const pluginInfo = this.pluginManager.getPluginInfoByWebContents(event.sender)
-          if (!pluginInfo) {
-            return { success: false, error: '无法获取插件信息' }
-          }
+    ipcMain.handle('plugin:ai-call-function', async (event, functionName: string, args: string) => {
+      try {
+        const pluginInfo = this.pluginManager.getPluginInfoByWebContents(event.sender)
+        if (!pluginInfo) {
+          return { success: false, error: '无法获取插件信息' }
+        }
 
-          // 调用插件的函数（函数必须挂载到 window 对象上）
-          const result = await event.sender.executeJavaScript(`
+        // 调用插件的函数（函数必须挂载到 window 对象上）
+        const result = await event.sender.executeJavaScript(`
             (async () => {
               if (typeof window.${functionName} === 'function') {
                 const args = ${args};
@@ -168,16 +166,15 @@ class PluginAiAPI {
             })()
           `)
 
-          return { success: true, data: result }
-        } catch (error: unknown) {
-          console.error('调用插件函数失败:', error)
-          return {
-            success: false,
-            error: error instanceof Error ? error.message : '未知错误'
-          }
+        return { success: true, data: result }
+      } catch (error: unknown) {
+        console.error('调用插件函数失败:', error)
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : '未知错误'
         }
       }
-    )
+    })
   }
 
   /**

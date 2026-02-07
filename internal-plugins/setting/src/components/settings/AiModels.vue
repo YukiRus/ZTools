@@ -131,7 +131,7 @@ const showEditor = ref(false)
 const editingModel = ref<AiModel | null>(null)
 
 // 加载模型列表
-async function loadModels() {
+async function loadModels(): Promise<void> {
   try {
     const result = await window.ztools.internal.aiModels.getAll()
     if (result.success && result.data) {
@@ -144,25 +144,25 @@ async function loadModels() {
 }
 
 // 显示添加编辑器
-function showAddEditor() {
+function showAddEditor(): void {
   editingModel.value = null
   showEditor.value = true
 }
 
 // 显示编辑编辑器
-function handleEdit(model: AiModel) {
+function handleEdit(model: AiModel): void {
   editingModel.value = model
   showEditor.value = true
 }
 
 // 关闭编辑器
-function closeEditor() {
+function closeEditor(): void {
   showEditor.value = false
   editingModel.value = null
 }
 
 // 保存模型
-async function handleSave(model: AiModel) {
+async function handleSave(model: AiModel): Promise<void> {
   // 验证必填字段
   if (!model.id || !model.label || !model.apiUrl || !model.apiKey) {
     error('请填写所有必填字段')
@@ -209,8 +209,12 @@ async function handleSave(model: AiModel) {
 }
 
 // 删除模型
-async function handleDelete(modelId: string) {
-  const confirmed = await confirm('确定要删除这个模型吗？', '删除确认', 'warning')
+async function handleDelete(modelId: string): Promise<void> {
+  const confirmed = await confirm({
+    message: '确定要删除这个模型吗？',
+    title: '删除确认',
+    type: 'warning'
+  })
   if (!confirmed) {
     return
   }

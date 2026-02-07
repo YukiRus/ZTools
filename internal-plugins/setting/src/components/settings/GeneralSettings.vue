@@ -294,7 +294,11 @@
         <span class="setting-desc">选择搜索框的显示模式</span>
       </div>
       <div class="setting-control">
-        <Dropdown v-model="searchMode" :options="searchModeOptions" @change="handleSearchModeChange" />
+        <Dropdown
+          v-model="searchMode"
+          :options="searchModeOptions"
+          @change="handleSearchModeChange"
+        />
       </div>
     </div>
 

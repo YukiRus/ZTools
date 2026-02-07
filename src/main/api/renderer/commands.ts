@@ -208,7 +208,12 @@ export class AppsAPI {
         // 插件启动参数中添加 featureCode
         this.launchParam.code = featureCode || ''
 
-        console.log('启动插件:', { path: appPath, featureCode, name, launchParam: this.launchParam })
+        console.log('启动插件:', {
+          path: appPath,
+          featureCode,
+          name,
+          launchParam: this.launchParam
+        })
 
         // 更新指令使用统计（所有指令都统计，用于匹配推荐排序）
         await this.updateUsageStats({ path: appPath, type, featureCode, name })

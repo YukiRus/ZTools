@@ -39,8 +39,8 @@ export function httpRequest(url: string, options: HttpRequestOptions = {}): Prom
     // 默认禁用缓存的请求头（用户传入的 headers 可以覆盖）
     const defaultHeaders = {
       'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0',
+      Pragma: 'no-cache',
+      Expires: '0',
       ...headers // 用户自定义的 headers 会覆盖默认值
     }
 

@@ -94,7 +94,7 @@ import { useToast } from '../../composables/useToast'
 import Icon from '../common/Icon.vue'
 import ShortcutEditor from './ShortcutEditor.vue'
 
-const { success, error, warning, info, confirm } = useToast()
+const { success, error, warning, confirm } = useToast()
 
 interface GlobalShortcut {
   id: string

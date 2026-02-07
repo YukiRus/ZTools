@@ -4,11 +4,7 @@
     :width="size"
     :height="size"
     :viewBox="
-      name === 'cloud'
-        ? '0 0 1024 1024'
-        : name === 'brain'
-          ? '100 100 850 850'
-          : '0 0 24 24'
+      name === 'cloud' ? '0 0 1024 1024' : name === 'brain' ? '100 100 850 850' : '0 0 24 24'
     "
     fill="none"
     xmlns="http://www.w3.org/2000/svg"

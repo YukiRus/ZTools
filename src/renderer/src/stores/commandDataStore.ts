@@ -865,10 +865,7 @@ export const useCommandDataStore = defineStore('commandData', () => {
   }
 
   // 搜索支持窗口的指令（根据当前激活窗口进行匹配）
-  function searchWindowCommands(windowInfo?: {
-    app?: string
-    title?: string
-  }): SearchResult[] {
+  function searchWindowCommands(windowInfo?: { app?: string; title?: string }): SearchResult[] {
     if (!windowInfo || (!windowInfo.app && !windowInfo.title)) {
       return []
     }

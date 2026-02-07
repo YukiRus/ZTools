@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * 从 uTools API Types 同步并转换为 ZTools API Types
  *

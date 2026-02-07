@@ -1,4 +1,5 @@
 import { execSync } from 'child_process'
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
 import { readFileSync } from 'fs'
 
 // 获取Git commit hash

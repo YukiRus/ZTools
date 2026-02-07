@@ -44,7 +44,7 @@ class ProxyManager {
     if (!this.currentConfig.enabled || !this.currentConfig.proxyRules) {
       // 清除自定义代理配置，恢复使用系统代理
       await sess.setProxy({
-        mode: 'system'  // 使用系统代理
+        mode: 'system' // 使用系统代理
       })
       if (name) {
         console.log(`${name} 已切换到系统代理`)
@@ -56,11 +56,11 @@ class ProxyManager {
     // 绕过规则：使用 Chromium 的代理绕过规则语法
     // 参考：https://source.chromium.org/chromium/chromium/src/+/main:net/docs/proxy.md
     const bypassRules = [
-      'localhost',      // 绕过 localhost
-      '127.0.0.1',      // 绕过 127.0.0.1
-      '::1',            // 绕过 IPv6 回环（不需要方括号）
-      '<local>'         // 绕过所有本地地址
-    ].join(',')         // 使用逗号分隔（不是分号）
+      'localhost', // 绕过 localhost
+      '127.0.0.1', // 绕过 127.0.0.1
+      '::1', // 绕过 IPv6 回环（不需要方括号）
+      '<local>' // 绕过所有本地地址
+    ].join(',') // 使用逗号分隔（不是分号）
 
     await sess.setProxy({
       proxyRules: this.currentConfig.proxyRules,

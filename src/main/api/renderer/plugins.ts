@@ -507,9 +507,7 @@ export class PluginsAPI {
   }
 
   // 终止插件并返回搜索页面
-  private killPluginAndReturn(
-    pluginPath: string
-  ): { success: boolean; error?: string } {
+  private killPluginAndReturn(pluginPath: string): { success: boolean; error?: string } {
     try {
       console.log('终止插件并返回搜索页面:', pluginPath)
       if (this.pluginManager) {

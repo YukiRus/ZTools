@@ -74,7 +74,16 @@ const emit = defineEmits<{
 // 菜单项类型
 interface MenuItem {
   id: string
-  icon: 'settings' | 'plugin' | 'keyboard' | 'store' | 'database' | 'list' | 'cloud' | 'folder' | 'brain'
+  icon:
+    | 'settings'
+    | 'plugin'
+    | 'keyboard'
+    | 'store'
+    | 'database'
+    | 'list'
+    | 'cloud'
+    | 'folder'
+    | 'brain'
   label: string
 }
 

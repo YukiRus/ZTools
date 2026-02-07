@@ -131,12 +131,28 @@
               <TagDropdown
                 v-for="(cmd, idx) in feature.textCmds"
                 :key="idx"
-                :menu-items="getMenuItems(isCommandDisabled(selectedSource?.name || '', feature.code, cmd.name, 'text'), 'text')"
-                @select="(key) => handleMenuSelect(key, selectedSource?.name || '', feature.code, cmd.name, 'text')"
+                :menu-items="
+                  getMenuItems(
+                    isCommandDisabled(selectedSource?.name || '', feature.code, cmd.name, 'text'),
+                    'text'
+                  )
+                "
+                @select="
+                  (key) =>
+                    handleMenuSelect(
+                      key,
+                      selectedSource?.name || '',
+                      feature.code,
+                      cmd.name,
+                      'text'
+                    )
+                "
               >
                 <CommandTag
                   :command="cmd"
-                  :disabled="isCommandDisabled(selectedSource?.name || '', feature.code, cmd.name, 'text')"
+                  :disabled="
+                    isCommandDisabled(selectedSource?.name || '', feature.code, cmd.name, 'text')
+                  "
                   show-arrow
                 />
               </TagDropdown>
@@ -161,12 +177,28 @@
             <TagDropdown
               v-for="(cmd, idx) in feature.matchCmds"
               :key="idx"
-              :menu-items="getMenuItems(isCommandDisabled(selectedSource?.name || '', feature.code, cmd.name, cmd.type), cmd.type)"
-              @select="(key) => handleMenuSelect(key, selectedSource?.name || '', feature.code, cmd.name, cmd.type)"
+              :menu-items="
+                getMenuItems(
+                  isCommandDisabled(selectedSource?.name || '', feature.code, cmd.name, cmd.type),
+                  cmd.type
+                )
+              "
+              @select="
+                (key) =>
+                  handleMenuSelect(
+                    key,
+                    selectedSource?.name || '',
+                    feature.code,
+                    cmd.name,
+                    cmd.type
+                  )
+              "
             >
               <CommandTag
                 :command="cmd"
-                :disabled="isCommandDisabled(selectedSource?.name || '', feature.code, cmd.name, cmd.type)"
+                :disabled="
+                  isCommandDisabled(selectedSource?.name || '', feature.code, cmd.name, cmd.type)
+                "
                 show-arrow
               />
             </TagDropdown>

@@ -261,6 +261,14 @@ declare global {
           error?: string
         }>
 
+        // AI 模型管理
+        aiModels: {
+          getAll: () => Promise<{ success: boolean; data?: any[]; error?: string }>
+          add: (model: any) => Promise<{ success: boolean; error?: string }>
+          update: (model: any) => Promise<{ success: boolean; error?: string }>
+          delete: (id: string) => Promise<{ success: boolean; error?: string }>
+        }
+
         // 通知主渲染进程禁用指令列表已更改
         notifyDisabledCommandsChanged: () => Promise<{ success: boolean }>
       }
