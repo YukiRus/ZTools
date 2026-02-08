@@ -1,4 +1,4 @@
-import { app, ipcMain, shell, clipboard } from 'electron'
+import { app, ipcMain, shell } from 'electron'
 import { promises as fs } from 'fs'
 import path from 'path'
 import { normalizeIconPath } from '../../common/iconUtils'
@@ -7,8 +7,8 @@ import { scanApplications } from '../../core/commandScanner'
 import { pluginFeatureAPI } from '../plugin/feature'
 import databaseAPI from '../shared/database'
 import pluginsAPI from './plugins'
+import { executeSystemCommand } from './systemCommands'
 import { systemSettingsAPI } from './systemSettings'
-import windowManager from '../../managers/windowManager'
 
 /**
  * 上次匹配状态接口
@@ -264,7 +264,10 @@ export class AppsAPI {
           if (pluginConfig.name === 'system') {
             console.log('检测到 system 插件，执行系统命令:', featureCode)
             // system 插件：执行系统命令
-            return await this.executeSystemCommand(featureCode || '', param)
+            return await executeSystemCommand(featureCode || '', {
+              mainWindow: this.mainWindow,
+              pluginManager: this.pluginManager
+            }, param)
           }
         } catch (error) {
           console.error('检查 system 插件失败:', error)
@@ -915,200 +918,6 @@ export class AppsAPI {
     }
   }
 
-  /**
-   * 执行系统命令（system 插件专用）
-   */
-  private async executeSystemCommand(command: string, param?: any): Promise<any> {
-    const { exec } = await import('child_process')
-    const { promisify } = await import('util')
-    const execAsync = promisify(exec)
-
-    const platform = process.platform
-
-    let cmd = ''
-
-    switch (command) {
-      case 'clear':
-        // 停止所有插件
-        console.log('执行 Clear 指令：停止所有插件')
-        if (this.pluginManager) {
-          this.pluginManager.killAllPlugins()
-        }
-        // 通知渲染进程清空搜索框等
-        this.mainWindow?.webContents.send('app-launched')
-        return { success: true }
-
-      case 'reboot':
-        if (platform === 'darwin') {
-          cmd = 'osascript -e "tell application \\"System Events\\" to restart"'
-        } else if (platform === 'win32') {
-          cmd = 'shutdown /r /t 0'
-        }
-        break
-
-      case 'shutdown':
-        if (platform === 'darwin') {
-          cmd = 'osascript -e "tell application \\"System Events\\" to shut down"'
-        } else if (platform === 'win32') {
-          cmd = 'shutdown /s /t 0'
-        }
-        break
-
-      case 'sleep':
-        if (platform === 'darwin') {
-          cmd = 'osascript -e "tell application \\"System Events\\" to sleep"'
-        } else if (platform === 'win32') {
-          cmd = 'rundll32.exe powrprof.dll,SetSuspendState 0,1,0'
-        }
-        break
-
-      case 'search':
-        // 百度搜索
-        console.log('执行百度搜索:', param)
-        if (param && param.payload) {
-          const query = encodeURIComponent(param.payload)
-          const url = `https://www.baidu.com/s?wd=${query}`
-          await shell.openExternal(url)
-          this.mainWindow?.webContents.send('app-launched')
-          this.mainWindow?.hide()
-          return { success: true }
-        }
-        return { success: false, error: '缺少搜索关键词' }
-
-      case 'bing-search':
-        // 必应搜索
-        console.log('执行必应搜索:', param)
-        if (param && param.payload) {
-          const query = encodeURIComponent(param.payload)
-          const url = `https://www.bing.com/search?q=${query}`
-          await shell.openExternal(url)
-          this.mainWindow?.webContents.send('app-launched')
-          this.mainWindow?.hide()
-          return { success: true }
-        }
-        return { success: false, error: '缺少搜索关键词' }
-
-      case 'open-url':
-        // 打开网址
-        console.log('打开网址:', param)
-        if (param && param.payload) {
-          let url = param.payload.trim()
-          // 如果不是以 http:// 或 https:// 开头，自动添加 https://
-          if (!url.match(/^https?:\/\//i)) {
-            url = `https://${url}`
-          }
-          await shell.openExternal(url)
-          this.mainWindow?.webContents.send('app-launched')
-          this.mainWindow?.hide()
-          return { success: true }
-        }
-        return { success: false, error: '缺少网址' }
-
-      case 'copy-path': {
-        // 复制访达当前文件夹路径
-        console.log('执行复制路径')
-        const previousWindow = windowManager.getPreviousActiveWindow()
-
-        if (!previousWindow) {
-          return { success: false, error: '无法获取当前窗口信息' }
-        }
-
-        if (platform === 'darwin') {
-          // macOS: 使用 AppleScript 获取 Finder 当前路径
-          try {
-            const script = `
-            tell application "Finder"
-              if (count of Finder windows) is 0 then
-                return POSIX path of (desktop as alias)
-              else
-                return POSIX path of (target of front window as alias)
-              end if
-            end tell
-          `
-            const { stdout } = await execAsync(`osascript -e '${script}'`)
-            const folderPath = stdout.trim()
-            clipboard.writeText(folderPath)
-            console.log('已复制路径:', folderPath)
-            // this.mainWindow?.webContents.send('app-launched')
-            this.mainWindow?.hide()
-            return { success: true, path: folderPath }
-          } catch (error) {
-            console.error('获取 Finder 路径失败:', error)
-            return { success: false, error: String(error) }
-          }
-        }
-        return { success: false, error: `不支持的平台: ${platform}` }
-      }
-
-      case 'open-terminal': {
-        // 在访达当前文件夹打开终端
-        console.log('执行在终端打开')
-        const previousWindow = windowManager.getPreviousActiveWindow()
-
-        if (!previousWindow) {
-          return { success: false, error: '无法获取当前窗口信息' }
-        }
-
-        if (platform === 'darwin') {
-          // macOS: 使用 AppleScript 在 Finder 当前路径打开终端
-          try {
-            const script = `
-            tell application "Finder"
-              if (count of Finder windows) is 0 then
-                set folderPath to POSIX path of (desktop as alias)
-              else
-                set folderPath to POSIX path of (target of front window as alias)
-              end if
-            end tell
-
-            tell application "Terminal"
-              activate
-              do script "cd " & quoted form of folderPath
-            end tell
-          `
-            await execAsync(`osascript -e '${script}'`)
-            console.log('已在终端打开')
-            // this.mainWindow?.webContents.send('app-launched')
-            this.mainWindow?.hide()
-            return { success: true }
-          } catch (error) {
-            console.error('在终端打开失败:', error)
-            return { success: false, error: String(error) }
-          }
-        }
-        return { success: false, error: `不支持的平台: ${platform}` }
-      }
-
-      default:
-        return { success: false, error: `Unknown system command: ${command}` }
-    }
-
-    if (!cmd) {
-      return { success: false, error: `Unsupported platform: ${platform}` }
-    }
-
-    console.log('执行系统命令:', cmd)
-
-    try {
-      const { stdout, stderr } = await execAsync(cmd)
-
-      if (stderr) {
-        console.error('系统命令错误输出:', stderr)
-      }
-      if (stdout) {
-        console.log('系统命令输出:', stdout)
-      }
-
-      // 通知渲染进程并隐藏主窗口
-      this.mainWindow?.webContents.send('app-launched')
-      this.mainWindow?.hide()
-
-      return { success: true }
-    } catch (error) {
-      console.error('执行系统命令失败:', error)
-      return { success: false, error: String(error) }
-    }
-  }
 }
 
 export default new AppsAPI()

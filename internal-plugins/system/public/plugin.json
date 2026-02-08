@@ -69,6 +69,12 @@
       ]
     },
     {
+      "code": "window-info",
+      "explain": "窗口信息",
+      "icon": "window-info.png",
+      "cmds": ["窗口信息", "Window Info"]
+    },
+    {
       "code": "copy-path",
       "explain": "复制路径",
       "icon": "folder.png",

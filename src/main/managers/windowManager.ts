@@ -601,6 +601,12 @@ class WindowManager {
     app: string
     bundleId?: string
     pid?: number
+    title?: string
+    x?: number
+    y?: number
+    width?: number
+    height?: number
+    appPath?: string
   } | null {
     return this.previousActiveWindow
   }
