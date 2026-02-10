@@ -4,6 +4,7 @@ import path from 'path'
 import { normalizeIconPath } from '../../common/iconUtils'
 import { launchApp, type ConfirmDialogOptions } from '../../core/commandLauncher'
 import { scanApplications } from '../../core/commandScanner'
+import { UwpManager } from '../../core/native'
 import { pluginFeatureAPI } from '../plugin/feature'
 import databaseAPI from '../shared/database'
 import pluginsAPI from './plugins'
@@ -145,6 +146,33 @@ export class AppsAPI {
   private async scanAndCacheApps(): Promise<any[]> {
     const apps = await scanApplications()
     console.log(`扫描到 ${apps.length} 个应用`)
+
+    // Windows 平台：获取 UWP 应用并合并
+    if (process.platform === 'win32') {
+      try {
+        const uwpApps = UwpManager.getUwpApps()
+        console.log(`获取到 ${uwpApps.length} 个 UWP 应用`)
+
+        // 将 UWP 应用转换为 Command 格式，使用 uwp: 前缀标识
+        for (const uwpApp of uwpApps) {
+          // 跳过重复：如果已有同名应用则不添加
+          const isDuplicate = apps.some(
+            (a) => a.name.toLowerCase() === uwpApp.name.toLowerCase()
+          )
+          if (isDuplicate) continue
+
+          apps.push({
+            name: uwpApp.name,
+            path: `uwp:${uwpApp.appId}`,
+            icon: uwpApp.icon || ''
+          })
+        }
+        console.log(apps)
+        console.log(`合并 UWP 后共 ${apps.length} 个应用`)
+      } catch (error) {
+        console.error('获取 UWP 应用失败:', error)
+      }
+    }
 
     // 注意：windowsScanner 已经在扫描时生成了 ztools-icon:// 协议 URL
     // 不需要再进行图标提取或文件转换，直接使用扫描结果即可
@@ -338,26 +366,38 @@ export class AppsAPI {
         return { success: true }
       } else {
         // 直接启动（app 或 system-setting 或 local-shortcut）
-        // 检查是否是协议链接（如 ms-settings:, steam://, battlenet:// 等）
-        const isProtocolLink =
-          /^[a-zA-Z][a-zA-Z0-9+\-.]*:/.test(appPath) && !appPath.includes('\\')
-        if (isProtocolLink) {
-          await shell.openExternal(appPath)
+        // 检查是否是 UWP 应用（uwp: 前缀）
+        if (appPath.startsWith('uwp:')) {
+          const appId = appPath.slice(4)
+          try {
+            UwpManager.launchUwpApp(appId)
+            console.log(`成功启动 UWP 应用: ${appId}`)
+          } catch (error) {
+            console.error('启动 UWP 应用失败:', error)
+            throw error
+          }
         } else {
-          // 检查是否为本地启动项
-          const localShortcuts = await databaseAPI.dbGet('local-shortcuts')
-          const isLocalShortcut = localShortcuts?.some((s: any) => s.path === appPath)
-
-          if (isLocalShortcut) {
-            // 本地启动项：使用 shell.openPath 打开
-            const result = await shell.openPath(appPath)
-            if (result) {
-              console.error('打开本地启动项失败:', result)
-              throw new Error(`打开失败: ${result}`)
-            }
+          // 检查是否是协议链接（如 ms-settings:, steam://, battlenet:// 等）
+          const isProtocolLink =
+            /^[a-zA-Z][a-zA-Z0-9+\-.]*:/.test(appPath) && !appPath.includes('\\')
+          if (isProtocolLink) {
+            await shell.openExternal(appPath)
           } else {
-            // 普通应用
-            await launchApp(appPath, confirmDialog)
+            // 检查是否为本地启动项
+            const localShortcuts = await databaseAPI.dbGet('local-shortcuts')
+            const isLocalShortcut = localShortcuts?.some((s: any) => s.path === appPath)
+
+            if (isLocalShortcut) {
+              // 本地启动项：使用 shell.openPath 打开
+              const result = await shell.openPath(appPath)
+              if (result) {
+                console.error('打开本地启动项失败:', result)
+                throw new Error(`打开失败: ${result}`)
+              }
+            } else {
+              // 普通应用
+              await launchApp(appPath, confirmDialog)
+            }
           }
         }
 

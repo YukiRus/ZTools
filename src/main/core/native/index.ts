@@ -8,6 +8,13 @@ const platform = os.platform()
 const addon = require(platform === 'darwin' ? macZToolsNative : winZToolsNative)
 
 // 原生模块接口类型定义
+interface UwpAppInfo {
+  name: string
+  appId: string
+  icon: string
+  installLocation: string
+}
+
 interface NativeAddon {
   startMonitor: (callback: () => void) => void
   stopMonitor: () => void
@@ -28,6 +35,8 @@ interface NativeAddon {
     callback: () => void
   ) => void
   stopMouseMonitor: () => void
+  getUwpApps: () => UwpAppInfo[]
+  launchUwpApp: (appId: string) => boolean
 }
 
 interface WindowInfo {
@@ -390,8 +399,43 @@ export class ScreenCapture {
   }
 }
 
+/**
+ * UWP 应用管理类
+ */
+export class UwpManager {
+  /**
+   * 获取已安装的 UWP 应用列表
+   * @returns {Array<{name: string, appId: string, icon: string, installLocation: string}>} 应用列表
+   * - name: 应用显示名称
+   * - appId: AppUserModelID（用于启动应用）
+   * - icon: 应用图标路径
+   * - installLocation: 应用安装目录
+   */
+  static getUwpApps(): UwpAppInfo[] {
+    if (platform !== 'win32') {
+      throw new Error('getUwpApps is only supported on Windows')
+    }
+    return (addon as NativeAddon).getUwpApps()
+  }
+
+  /**
+   * 启动 UWP 应用
+   * @param {string} appId - AppUserModelID（从 getUwpApps 获取）
+   * @returns {boolean} 是否启动成功
+   */
+  static launchUwpApp(appId: string): boolean {
+    if (platform !== 'win32') {
+      throw new Error('launchUwpApp is only supported on Windows')
+    }
+    if (typeof appId !== 'string' || !appId) {
+      throw new TypeError('appId must be a non-empty string')
+    }
+    return (addon as NativeAddon).launchUwpApp(appId)
+  }
+}
+
 // 为了向后兼容，默认导出 ClipboardMonitor
 export default ClipboardMonitor
 
 // 导出类型
-export type { ClipboardFile, WindowInfo, ActiveWindowResult, MouseButtonType }
+export type { ClipboardFile, WindowInfo, ActiveWindowResult, MouseButtonType, UwpAppInfo }
