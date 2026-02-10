@@ -323,6 +323,10 @@ export class AppsAPI {
               this.mainWindow?.hide()
             }
           } else {
+            // 检查主窗口是否可见
+            if (!this.mainWindow?.isVisible()) {
+              this.mainWindow?.show()
+            }
             // 通知渲染进程准备显示插件占位区域
             this.mainWindow?.webContents.send('show-plugin-placeholder')
 
