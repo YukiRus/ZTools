@@ -644,13 +644,6 @@ onMounted(async () => {
     await Promise.all([commandDataStore.loadCommands(), commandDataStore.reloadUserData()])
   })
 
-  // 监听应用目录变化事件（用户安装或删除应用后自动刷新）
-  window.ztools.onAppsChanged(async () => {
-    console.log('应用目录发生变化，重新加载指令列表')
-    // 重新加载指令列表
-    await commandDataStore.loadCommands()
-  })
-
   // 监听更新下载完成事件
   window.ztools.onUpdateDownloaded((data) => {
     console.log('更新已下载:', data)

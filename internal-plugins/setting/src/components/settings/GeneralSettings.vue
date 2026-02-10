@@ -287,6 +287,20 @@
       </div>
     </div>
 
+    <!-- 本地应用搜索 -->
+    <div class="setting-item">
+      <div class="setting-label">
+        <span>本地应用搜索</span>
+        <span class="setting-desc">开启后搜索结果将包含本地安装的应用</span>
+      </div>
+      <div class="setting-control">
+        <label class="toggle">
+          <input v-model="localAppSearch" type="checkbox" @change="handleLocalAppSearchChange" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
     <!-- 搜索框模式设置 -->
     <div class="setting-item">
       <div class="setting-label">
@@ -610,6 +624,7 @@ const autoPaste = ref<AutoPasteOption>('off')
 const autoClear = ref<AutoClearOption>('immediately')
 const autoBackToSearch = ref<AutoBackToSearchOption>('never')
 const showRecentInSearch = ref(true)
+const localAppSearch = ref(true)
 const recentRows = ref(2)
 const pinnedRows = ref(2)
 const searchMode = ref<'aggregate' | 'list'>('aggregate')
@@ -881,6 +896,18 @@ async function handleShowRecentInSearchChange(): Promise<void> {
     console.log('显示最近使用配置已更新:', showRecentInSearch.value)
   } catch (error) {
     console.error('保存显示最近使用配置失败:', error)
+  }
+}
+
+// 处理本地应用搜索配置变化
+async function handleLocalAppSearchChange(): Promise<void> {
+  try {
+    await saveSettings()
+    // 通知主渲染进程更新
+    await window.ztools.internal.updateLocalAppSearch(localAppSearch.value)
+    console.log('本地应用搜索配置已更新:', localAppSearch.value)
+  } catch (error) {
+    console.error('保存本地应用搜索配置失败:', error)
   }
 }
 
@@ -1392,6 +1419,7 @@ async function loadSettings(): Promise<void> {
       autoClear.value = data.autoClear ?? 'immediately'
       autoBackToSearch.value = data.autoBackToSearch ?? 'never'
       showRecentInSearch.value = data.showRecentInSearch ?? true
+      localAppSearch.value = data.localAppSearch ?? true
       recentRows.value = data.recentRows ?? 2
       pinnedRows.value = data.pinnedRows ?? 2
       theme.value = data.theme ?? 'system'
@@ -1454,6 +1482,7 @@ async function saveSettings(): Promise<void> {
       autoClear: autoClear.value,
       autoBackToSearch: autoBackToSearch.value,
       showRecentInSearch: showRecentInSearch.value,
+      localAppSearch: localAppSearch.value,
       recentRows: recentRows.value,
       pinnedRows: pinnedRows.value,
       searchMode: searchMode.value,

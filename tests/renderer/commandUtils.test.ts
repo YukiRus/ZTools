@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { getCommandId, applySpecialConfig, calculateMatchScore } from '../../src/renderer/src/stores/commandUtils'
+import {
+  getCommandId,
+  applySpecialConfig,
+  calculateMatchScore
+} from '../../src/renderer/src/stores/commandUtils'
 
 // ========== getCommandId ==========
 
@@ -126,12 +130,12 @@ describe('calculateMatchScore', () => {
   })
 
   it('连续匹配靠前时分数应更高', () => {
-    const scoreEarly = calculateMatchScore('chrome browser extension', 'chrome', makeMatch([[0, 5]]))
-    const scoreLate = calculateMatchScore(
-      'google chrome browser',
+    const scoreEarly = calculateMatchScore(
+      'chrome browser extension',
       'chrome',
-      makeMatch([[7, 12]])
+      makeMatch([[0, 5]])
     )
+    const scoreLate = calculateMatchScore('google chrome browser', 'chrome', makeMatch([[7, 12]]))
     expect(scoreEarly).toBeGreaterThan(scoreLate)
   })
 
@@ -141,16 +145,8 @@ describe('calculateMatchScore', () => {
   })
 
   it('匹配长度占比越高分数越高', () => {
-    const scoreShort = calculateMatchScore(
-      'a very long application name',
-      'a',
-      makeMatch([[0, 0]])
-    )
-    const scoreLong = calculateMatchScore(
-      'chrome',
-      'chrom',
-      makeMatch([[0, 4]])
-    )
+    const scoreShort = calculateMatchScore('a very long application name', 'a', makeMatch([[0, 0]]))
+    const scoreLong = calculateMatchScore('chrome', 'chrom', makeMatch([[0, 4]]))
     // chrom/chrome = 83% 比 a/a very long... = ~3.5% 匹配比例高
     expect(scoreLong).toBeGreaterThan(scoreShort)
   })

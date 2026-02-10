@@ -442,6 +442,16 @@ export class InternalPluginAPI {
       return { success: true }
     })
 
+    // 通知主渲染进程更新本地应用搜索配置
+    ipcMain.handle('internal:update-local-app-search', async (event, enabled: boolean) => {
+      if (!requireInternalPlugin(this.pluginManager, event)) {
+        throw new PermissionDeniedError('internal:update-local-app-search')
+      }
+      // 更新 commandsAPI 中的配置
+      await (commandsAPI as any).setLocalAppSearch(enabled)
+      return { success: true }
+    })
+
     // 通知主渲染进程更新主题色
     ipcMain.handle(
       'internal:update-primary-color',

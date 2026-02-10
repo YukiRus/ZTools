@@ -136,6 +136,7 @@ declare global {
         updateAutoClear: (autoClear: string) => Promise<void>
         updateAutoBackToSearch: (autoBackToSearch: string) => Promise<void>
         updateShowRecentInSearch: (showRecentInSearch: boolean) => Promise<void>
+        updateLocalAppSearch: (enabled: boolean) => Promise<void>
         updateRecentRows: (rows: number) => Promise<void>
         updatePinnedRows: (rows: number) => Promise<void>
         updateSearchMode: (searchMode: 'aggregate' | 'list') => Promise<void>

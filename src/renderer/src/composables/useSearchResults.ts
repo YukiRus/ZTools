@@ -5,9 +5,9 @@ import { useCommandDataStore } from '../stores/commandDataStore'
  * 去重：同一个 feature 只保留第一个匹配的 cmd
  * 插件类型用 path+featureCode 去重，非插件用 name+path 去重
  */
-export function deduplicateResults<T extends { type?: string; path: string; name: string; featureCode?: string }>(
-  results: T[]
-): T[] {
+export function deduplicateResults<
+  T extends { type?: string; path: string; name: string; featureCode?: string }
+>(results: T[]): T[] {
   const seenFeatures = new Set<string>()
   return results.filter((item) => {
     const featureKey =

@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { findCommandIndex, filterOutCommand, hasCommand } from '../../src/main/api/renderer/commandMatchers'
+import {
+  findCommandIndex,
+  filterOutCommand,
+  hasCommand
+} from '../../src/main/api/renderer/commandMatchers'
 
 // ========== findCommandIndex ==========
 

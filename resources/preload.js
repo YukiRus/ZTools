@@ -524,6 +524,9 @@ window.ztools = {
     // 通知主渲染进程更新搜索框模式
     updateSearchMode: async (mode) =>
       await electron.ipcRenderer.invoke('internal:update-search-mode', mode),
+    // 通知主渲染进程更新本地应用搜索配置
+    updateLocalAppSearch: async (enabled) =>
+      await electron.ipcRenderer.invoke('internal:update-local-app-search', enabled),
     // 通知主渲染进程更新主题色
     updatePrimaryColor: async (primaryColor, customColor) =>
       await electron.ipcRenderer.invoke('internal:update-primary-color', primaryColor, customColor),

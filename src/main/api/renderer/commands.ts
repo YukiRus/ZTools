@@ -31,14 +31,18 @@ export class AppsAPI {
   private pluginManager: any = null
   private launchParam: any = null
   private lastMatchState: LastMatchState | null = null
+  private isLocalAppSearchEnabled = true
 
   public init(mainWindow: Electron.BrowserWindow, pluginManager: any): void {
     this.mainWindow = mainWindow
     this.pluginManager = pluginManager
     this.setupIPC()
-    // 异步加载上次匹配状态（不阻塞初始化）
     this.loadLastMatchState().catch((error) => {
       console.error('加载上次匹配状态失败:', error)
+    })
+    // 异步加载本地应用搜索设置
+    this.loadLocalAppSearchSetting().catch((error) => {
+      console.error('加载本地应用搜索设置失败:', error)
     })
   }
 
@@ -61,10 +65,8 @@ export class AppsAPI {
 
     // 固定应用管理
     ipcMain.handle('pin-app', (_event, app: any) => this.pinApp(app))
-    ipcMain.handle(
-      'unpin-app',
-      (_event, appPath: string, featureCode?: string, name?: string) =>
-        this.unpinApp(appPath, featureCode, name)
+    ipcMain.handle('unpin-app', (_event, appPath: string, featureCode?: string, name?: string) =>
+      this.unpinApp(appPath, featureCode, name)
     )
     ipcMain.handle('update-pinned-order', (_event, newOrder: any[]) =>
       this.updatePinnedOrder(newOrder)
@@ -76,6 +78,34 @@ export class AppsAPI {
 
     // 使用统计管理
     ipcMain.handle('get-usage-stats', () => this.getUsageStats())
+  }
+
+  /**
+   * 设置本地应用搜索开启状态
+   */
+  public async setLocalAppSearch(enabled: boolean): Promise<void> {
+    this.isLocalAppSearchEnabled = enabled
+    console.log('本地应用搜索已' + (enabled ? '开启' : '关闭'))
+
+    // 通知渲染进程应用列表已更新
+    if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+      this.mainWindow.webContents.send('apps-changed')
+    }
+  }
+
+  /**
+   * 加载本地应用搜索设置
+   */
+  private async loadLocalAppSearchSetting(): Promise<void> {
+    try {
+      const data = await databaseAPI.dbGet('settings-general')
+      if (data && typeof data.localAppSearch === 'boolean') {
+        this.isLocalAppSearchEnabled = data.localAppSearch
+      }
+      console.log('加载本地应用搜索设置:', this.isLocalAppSearchEnabled)
+    } catch (error) {
+      console.error('加载本地应用搜索设置失败:', error)
+    }
   }
 
   /**
@@ -97,6 +127,12 @@ export class AppsAPI {
    */
   private async getApps(): Promise<any[]> {
     console.log('收到获取应用列表请求')
+
+    // 如果本地应用搜索被禁用，直接返回空列表
+    if (!this.isLocalAppSearchEnabled) {
+      console.log('本地应用搜索已关闭，返回空列表')
+      return []
+    }
 
     // 开发模式下强制重新扫描（方便调试）
     if (!app.isPackaged) {
@@ -407,7 +443,6 @@ export class AppsAPI {
         // 通知渲染进程应用已启动（清空搜索框等）
         this.mainWindow?.webContents.send('app-launched')
         this.mainWindow?.hide()
-        return { success: true }
       }
     } catch (error) {
       console.error('启动失败:', error)
@@ -595,13 +630,7 @@ export class AppsAPI {
       const stats: any[] = (await databaseAPI.dbGet('command-usage-stats')) || []
 
       // 查找是否已存在（非插件类型需要同时匹配 name 和 path，支持同路径不同名应用）
-      const existingIndex = findCommandIndex(
-        stats,
-        cmdPath,
-        type,
-        featureCode,
-        cmdName || cmdPath
-      )
+      const existingIndex = findCommandIndex(stats, cmdPath, type, featureCode, cmdName || cmdPath)
 
       if (existingIndex >= 0) {
         // 已存在，更新使用时间和次数
