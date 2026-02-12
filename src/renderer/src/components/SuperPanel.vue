@@ -609,7 +609,6 @@ onUnmounted(() => {
   min-height: 0;
 }
 
-
 .grid-item {
   display: flex;
   flex-direction: column;
@@ -703,7 +702,6 @@ onUnmounted(() => {
   overflow-y: auto;
   flex: 1;
 }
-
 
 .list-item {
   display: flex;

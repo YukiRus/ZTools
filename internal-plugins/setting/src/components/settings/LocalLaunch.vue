@@ -72,7 +72,7 @@
       <!-- 本地启动项列表 -->
       <div v-else class="shortcuts-list">
         <div
-          v-for="shortcut in shortcuts"
+          v-for="shortcut in filteredShortcuts"
           :key="shortcut.id"
           class="card shortcut-item"
           :title="shortcut.path"
@@ -199,9 +199,14 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onMounted, ref } from 'vue'
-import AdaptiveIcon from '../common/AdaptiveIcon.vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useToast } from '../../composables/useToast'
+import { weightedSearch } from '../../utils/weightedSearch'
+import AdaptiveIcon from '../common/AdaptiveIcon.vue'
+
+const props = defineProps<{
+  searchQuery?: string
+}>()
 
 const { success, error, confirm } = useToast()
 
@@ -222,6 +227,13 @@ const loading = ref(true)
 const isAdding = ref(false)
 const isDeleting = ref(false)
 const isDragging = ref(false)
+
+const filteredShortcuts = computed(() =>
+  weightedSearch(shortcuts.value, props.searchQuery || '', [
+    { value: (s) => s.alias || s.name || '', weight: 10 },
+    { value: (s) => s.path || '', weight: 5 }
+  ])
+)
 
 // 别名编辑状态
 const editingId = ref<string | null>(null)

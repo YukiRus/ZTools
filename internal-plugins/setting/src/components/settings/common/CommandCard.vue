@@ -1,5 +1,5 @@
 <template>
-  <div class="card command-card">
+  <div class="card command-card" :title="command.path || ''">
     <div class="command-icon">
       <span v-if="command.icon && command.icon.length <= 2" class="icon-emoji">
         {{ command.icon }}

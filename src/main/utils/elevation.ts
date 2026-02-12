@@ -1,4 +1,4 @@
-import { execFile } from 'child_process'
+import { execFile, spawn } from 'child_process'
 import { promisify } from 'util'
 
 const execFilePromise = promisify(execFile)
@@ -47,7 +47,6 @@ export async function execWithElevation(
         await execFilePromise(command, args, { timeout: 30000 })
       } else {
         // 不等待，使用 spawn detached
-        const { spawn } = await import('child_process')
         const subprocess = spawn(command, args, {
           detached: true,
           stdio: 'ignore'

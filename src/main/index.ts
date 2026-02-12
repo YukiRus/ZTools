@@ -10,6 +10,7 @@ import appWatcher from './appWatcher'
 import detachedWindowManager from './core/detachedWindowManager'
 import { loadInternalPlugins } from './core/internalPluginLoader'
 
+import crypto from 'crypto'
 import pluginManager from './managers/pluginManager'
 import windowManager from './managers/windowManager'
 import { IconExtractor } from './core/native/index'
@@ -121,7 +122,6 @@ export function registerIconProtocolForSession(targetSession: Electron.Session):
         await fs.mkdir(tempDir, { recursive: true })
 
         // 使用图标路径的哈希作为临时文件名
-        const crypto = await import('crypto')
         const hash = crypto.createHash('md5').update(iconPath).digest('hex')
         const tempPngPath = path.join(tempDir, `${hash}.png`)
 

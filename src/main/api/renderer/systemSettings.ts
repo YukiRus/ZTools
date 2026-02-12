@@ -1,3 +1,5 @@
+import { WINDOWS_SETTINGS } from '../../core/systemSettings/windowsSettings.js'
+
 export class SystemSettingsAPI {
   public init(): void {
     // 暂时不需要初始化逻辑
@@ -5,7 +7,6 @@ export class SystemSettingsAPI {
 
   public async getSystemSettings(): Promise<any[]> {
     if (process.platform === 'win32') {
-      const { WINDOWS_SETTINGS } = await import('../../core/systemSettings/windowsSettings.js')
       return WINDOWS_SETTINGS
     }
     return []

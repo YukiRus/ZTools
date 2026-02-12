@@ -96,6 +96,7 @@ declare global {
           success: boolean
           data?: Array<{
             pluginName: string
+            pluginTitle: string | null
             docCount: number
             attachmentCount: number
             logo: string | null

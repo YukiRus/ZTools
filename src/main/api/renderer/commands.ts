@@ -7,6 +7,7 @@ import { scanApplications } from '../../core/commandScanner'
 import { UwpManager } from '../../core/native'
 import { pluginFeatureAPI } from '../plugin/feature'
 import databaseAPI from '../shared/database'
+import { WINDOWS_SETTINGS } from '../../core/systemSettings/windowsSettings.js'
 import pluginsAPI from './plugins'
 import { executeSystemCommand } from './systemCommands'
 import { findCommandIndex, filterOutCommand, hasCommand } from './commandMatchers'
@@ -535,8 +536,6 @@ export class AppsAPI {
         } else {
           // 如果不是普通应用，尝试从系统设置中查找
           if (process.platform === 'win32') {
-            const { WINDOWS_SETTINGS } =
-              await import('../../core/systemSettings/windowsSettings.js')
             const setting = WINDOWS_SETTINGS.find((s: any) => s.uri === appPath)
 
             if (setting) {

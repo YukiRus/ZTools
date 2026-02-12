@@ -4,6 +4,7 @@ import { SyncConfig } from '../../core/sync/types'
 import lmdbInstance from '../../core/lmdb/lmdbInstance'
 import { safeStorage } from 'electron'
 import pluginDeviceAPI from '../plugin/device'
+import { WebDAVSyncClient } from '../../core/sync/webdavClient'
 
 /**
  * 同步 API
@@ -25,7 +26,6 @@ export class SyncAPI {
     // 测试 WebDAV 连接
     ipcMain.handle('sync:test-connection', async (_event, config: SyncConfig) => {
       try {
-        const { WebDAVSyncClient } = await import('../../core/sync/webdavClient')
         const client = new WebDAVSyncClient()
         await client.init(config)
         return { success: true }

@@ -14,42 +14,6 @@
           </div>
         </div>
 
-        <!-- 搜索框 -->
-        <div class="search-box">
-          <div class="search-input-wrapper">
-            <input
-              v-model="searchQuery"
-              type="text"
-              class="input search-input"
-              placeholder="搜索插件名称..."
-            />
-            <button
-              v-if="searchQuery"
-              class="btn btn-icon clear-btn"
-              title="清除搜索"
-              @click="clearSearch"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </button>
-          </div>
-          <div v-if="searchQuery" class="search-result-count">
-            找到 {{ filteredPlugins.length }} 个插件
-          </div>
-        </div>
-
         <!-- 插件列表 -->
         <div class="plugin-list">
           <div
@@ -230,10 +194,15 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useToast } from '../../composables/useToast'
+import { weightedSearch } from '../../utils/weightedSearch'
 import AdaptiveIcon from '../common/AdaptiveIcon.vue'
 import Icon from '../common/Icon.vue'
 import PluginDetail from './PluginDetail.vue'
-import { useToast } from '../../composables/useToast'
+
+const props = defineProps<{
+  searchQuery?: string
+}>()
 
 const { success, error, confirm } = useToast()
 
@@ -247,30 +216,16 @@ const isDeleting = ref(false)
 const isKilling = ref(false)
 const isReloading = ref(false)
 
-// 搜索相关状态
-const searchQuery = ref('')
-
 // 详情弹窗状态
 const isDetailVisible = ref(false)
 const selectedPlugin = ref<any | null>(null)
 
-// 过滤后的插件列表
-const filteredPlugins = computed(() => {
-  if (!searchQuery.value.trim()) {
-    return plugins.value
-  }
-
-  const query = searchQuery.value.toLowerCase().trim()
-  return plugins.value.filter((plugin) => {
-    const name = (plugin.title || plugin.name || '').toLowerCase()
-    return name.includes(query)
-  })
-})
-
-// 清除搜索
-function clearSearch(): void {
-  searchQuery.value = ''
-}
+const filteredPlugins = computed(() =>
+  weightedSearch(plugins.value, props.searchQuery || '', [
+    { value: (p) => p.title || p.name || '', weight: 10 },
+    { value: (p) => p.description || '', weight: 5 }
+  ])
+)
 
 // 加载插件列表
 async function loadPlugins(): Promise<void> {
@@ -574,42 +529,6 @@ function closePluginDetail(): void {
 .button-group {
   display: flex;
   gap: 10px;
-}
-
-/* 搜索框样式 */
-.search-box {
-  margin-bottom: 16px;
-}
-
-.search-input-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.search-input {
-  flex: 1;
-  font-size: 14px;
-  padding: 10px 12px;
-}
-
-.clear-btn {
-  flex-shrink: 0;
-  color: var(--text-secondary);
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
-}
-
-.clear-btn:hover {
-  color: var(--text-color);
-  background: var(--hover-bg);
-}
-
-.search-result-count {
-  margin-top: 8px;
-  font-size: 13px;
-  color: var(--text-secondary);
 }
 
 .plugin-list {
