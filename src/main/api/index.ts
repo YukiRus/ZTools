@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain } from 'electron'
+import { BrowserWindow, ipcMain, Notification } from 'electron'
 
 // 共享API（主程序和插件都能用）
 import clipboardAPI from './shared/clipboard'
@@ -213,7 +213,11 @@ class APIManager {
 
       const plugin = plugins.find((p: any) => p.title === pluginDescription)
       if (!plugin) {
-        console.error(`未找到插件: ${pluginDescription}`)
+        const msg = `未找到插件: ${pluginDescription}`
+        console.error(msg)
+        if (Notification.isSupported()) {
+          new Notification({ title: 'ZTools', body: msg }).show()
+        }
         return
       }
 
@@ -241,7 +245,11 @@ class APIManager {
       }
 
       if (!targetFeature) {
-        console.error(`未找到命令: ${pluginDescription}/${cmdName}`)
+        const msg = `未找到命令: ${pluginDescription}/${cmdName}`
+        console.error(msg)
+        if (Notification.isSupported()) {
+          new Notification({ title: 'ZTools', body: msg }).show()
+        }
         return
       }
 
