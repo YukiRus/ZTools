@@ -20,28 +20,28 @@
       <GeneralSettings v-if="activeMenu === 'general'" />
 
       <!-- 插件中心 -->
-      <PluginCenter v-if="activeMenu === 'plugins'" />
+      <PluginCenter v-if="activeMenu === 'plugins'" :search-query="props.searchQuery" />
 
       <!-- 插件市场 -->
-      <PluginMarket v-if="activeMenu === 'market'" />
+      <PluginMarket v-if="activeMenu === 'market'" :search-query="props.searchQuery" />
 
       <!-- 我的数据 -->
-      <DataManagement v-if="activeMenu === 'data'" />
+      <DataManagement v-if="activeMenu === 'data'" :search-query="props.searchQuery" />
 
       <!-- 全局快捷键 -->
-      <GlobalShortcuts v-if="activeMenu === 'shortcuts'" />
+      <GlobalShortcuts v-if="activeMenu === 'shortcuts'" :search-query="props.searchQuery" />
 
       <!-- WebDAV 同步 -->
       <SyncSettings v-if="activeMenu === 'sync'" />
 
       <!-- 所有指令 -->
-      <AllCommands v-if="activeMenu === 'all-commands'" />
+      <AllCommands v-if="activeMenu === 'all-commands'" :search-query="props.searchQuery" />
 
       <!-- 本地启动 -->
-      <LocalLaunch v-if="activeMenu === 'local-launch'" />
+      <LocalLaunch v-if="activeMenu === 'local-launch'" :search-query="props.searchQuery" />
 
       <!-- AI 模型管理 -->
-      <AiModels v-if="activeMenu === 'ai-models'" />
+      <AiModels v-if="activeMenu === 'ai-models'" :search-query="props.searchQuery" />
     </div>
   </div>
 </template>
@@ -62,6 +62,7 @@ import SyncSettings from './SyncSettings.vue'
 // Props
 interface Props {
   activePage: string
+  searchQuery?: string
 }
 
 const props = defineProps<Props>()

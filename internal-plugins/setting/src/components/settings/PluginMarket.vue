@@ -9,7 +9,7 @@
         </div>
         <div v-else class="market-grid">
           <div
-            v-for="plugin in plugins"
+            v-for="plugin in filteredPlugins"
             :key="plugin.name"
             class="card plugin-card"
             :title="plugin.description"
@@ -125,10 +125,15 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useToast } from '../../composables/useToast'
+import { weightedSearch } from '../../utils/weightedSearch'
 import AdaptiveIcon from '../common/AdaptiveIcon.vue'
 import PluginDetail from './PluginDetail.vue'
+
+const props = defineProps<{
+  searchQuery?: string
+}>()
 
 const { success, error, confirm } = useToast()
 
@@ -149,6 +154,13 @@ interface Plugin {
 const plugins = ref<Plugin[]>([])
 const isLoading = ref(false)
 const installingPlugin = ref<string | null>(null)
+
+const filteredPlugins = computed(() =>
+  weightedSearch(plugins.value, props.searchQuery || '', [
+    { value: (p) => p.title || p.name || '', weight: 10 },
+    { value: (p) => p.description || '', weight: 5 }
+  ])
+)
 
 // 详情弹窗状态
 const isDetailVisible = ref(false)

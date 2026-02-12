@@ -1,4 +1,6 @@
 import type { ConfirmDialogOptions } from './types'
+import { launchApp as macLaunch } from './macLauncher'
+import { launchApp as winLaunch } from './windowsLauncher'
 
 // 重新导出类型
 export type { ConfirmDialogOptions } from './types'
@@ -12,11 +14,9 @@ export async function launchApp(
 
   if (platform === 'darwin') {
     // macOS
-    const { launchApp: macLaunch } = await import('./macLauncher')
     return macLaunch(appPath, confirmDialog)
   } else if (platform === 'win32') {
     // Windows
-    const { launchApp: winLaunch } = await import('./windowsLauncher')
     return winLaunch(appPath, confirmDialog)
   } else {
     console.warn(`不支持的平台: ${platform}`)

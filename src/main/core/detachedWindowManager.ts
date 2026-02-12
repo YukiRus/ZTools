@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, WebContentsView } from 'electron'
+import { app, BrowserWindow, ipcMain, Menu, WebContentsView } from 'electron'
 import path from 'path'
 import { fileURLToPath, pathToFileURL } from 'url'
 import { v4 as uuidv4 } from 'uuid'
@@ -385,9 +385,6 @@ class DetachedWindowManager {
     ): Promise<void> => {
       // 验证事件来自这个窗口
       if (_event.sender.id !== win.webContents.id) return
-
-      // 导入 Menu 模块
-      const { Menu } = await import('electron')
 
       // 构建菜单
       const menu = Menu.buildFromTemplate(

@@ -1,4 +1,6 @@
 import { Command } from './types'
+import { scanApplications as macScan } from './macScanner'
+import { scanApplications as winScan } from './windowsScanner'
 
 export type { AppScanner, Command } from './types'
 
@@ -8,11 +10,9 @@ export async function scanApplications(): Promise<Command[]> {
 
   if (platform === 'darwin') {
     // macOS
-    const { scanApplications: macScan } = await import('./macScanner')
     return macScan()
   } else if (platform === 'win32') {
     // Windows
-    const { scanApplications: winScan } = await import('./windowsScanner')
     return winScan()
   } else {
     console.warn(`不支持的平台: ${platform}`)

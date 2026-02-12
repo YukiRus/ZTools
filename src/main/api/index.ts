@@ -218,7 +218,6 @@ class APIManager {
       }
 
       // 合并动态 features（支持动态指令）
-      const { pluginFeatureAPI } = await import('./plugin/feature.js')
       const dynamicFeatures = pluginFeatureAPI.loadDynamicFeatures(plugin.name)
       const allFeatures = [...(plugin.features || []), ...dynamicFeatures]
 

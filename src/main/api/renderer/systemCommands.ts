@@ -1,4 +1,6 @@
+import { exec } from 'child_process'
 import { BrowserWindow, clipboard, shell } from 'electron'
+import { promisify } from 'util'
 import { GLOBAL_SCROLLBAR_CSS } from '../../core/globalStyles'
 import windowManager from '../../managers/windowManager'
 
@@ -15,8 +17,6 @@ export async function executeSystemCommand(
   ctx: SystemCommandContext,
   param?: any
 ): Promise<any> {
-  const { exec } = await import('child_process')
-  const { promisify } = await import('util')
   const execAsync = promisify(exec)
 
   const platform = process.platform

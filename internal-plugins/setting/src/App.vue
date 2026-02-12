@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import ConfirmDialog from './components/common/ConfirmDialog.vue'
 import Toast from './components/common/Toast.vue'
 import Settings from './components/settings/Settings.vue'
@@ -9,6 +9,39 @@ const { toastState, confirmState, handleConfirm, handleCancel } = useToast()
 
 // 当前激活的页面
 const activePage = ref<string>('general')
+// 搜索关键词
+const searchQuery = ref<string>('')
+
+// 各页面搜索框 placeholder，未列出的页面不显示搜索框
+const pagePlaceholders: Record<string, string> = {
+  shortcuts: '搜索快捷键...',
+  plugins: '搜索已安装插件...',
+  market: '搜索插件市场...',
+  'ai-models': '搜索 AI 模型...',
+  'all-commands': '搜索指令...',
+  'local-launch': '搜索本地启动项...',
+  data: '搜索数据...'
+}
+
+// 显示或隐藏搜索框
+function updateSubInput(page: string): void {
+  searchQuery.value = ''
+  const placeholder = pagePlaceholders[page]
+  if (placeholder) {
+    window.ztools.setSubInput(
+      ({ text }) => {
+        searchQuery.value = text
+      },
+      placeholder,
+      true
+    )
+  } else {
+    window.ztools.removeSubInput()
+  }
+}
+
+// 切换页面时处理顶部搜索框
+watch(activePage, updateSubInput)
 
 onMounted(() => {
   // 插件进入时根据 feature code 决定显示哪个页面
@@ -30,6 +63,9 @@ onMounted(() => {
     const targetPage = pageMap[action.code] || 'general'
     console.log(`跳转到页面: ${targetPage}`)
     activePage.value = targetPage
+
+    // 根据页面决定是否显示搜索框
+    updateSubInput(targetPage)
   })
 
   window.ztools.onPluginOut(() => {
@@ -65,7 +101,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <Settings v-model:active-page="activePage" />
+  <Settings v-model:active-page="activePage" :search-query="searchQuery" />
   <!-- 全局Toast组件 -->
   <Toast
     v-model:visible="toastState.visible"

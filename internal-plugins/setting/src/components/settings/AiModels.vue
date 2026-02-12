@@ -10,7 +10,7 @@
 
         <!-- 模型列表 -->
         <div class="model-list">
-          <div v-for="model in models" :key="model.id" class="card model-item">
+          <div v-for="model in filteredModels" :key="model.id" class="card model-item">
             <div class="model-info">
               <div class="model-header">
                 <h3 class="model-name">{{ model.label }}</h3>
@@ -105,10 +105,15 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useToast } from '../../composables/useToast'
+import { weightedSearch } from '../../utils/weightedSearch'
 import Icon from '../common/Icon.vue'
 import AiModelEditor from './AiModelEditor.vue'
+
+const props = defineProps<{
+  searchQuery?: string
+}>()
 
 const { success, error, confirm } = useToast()
 
@@ -125,6 +130,14 @@ interface AiModel {
 // 模型列表
 const models = ref<AiModel[]>([])
 const isDeleting = ref(false)
+
+const filteredModels = computed(() =>
+  weightedSearch(models.value, props.searchQuery || '', [
+    { value: (m) => m.label || '', weight: 10 },
+    { value: (m) => m.apiUrl || '', weight: 5 },
+    { value: (m) => m.description || '', weight: 3 }
+  ])
+)
 
 // 编辑器状态
 const showEditor = ref(false)

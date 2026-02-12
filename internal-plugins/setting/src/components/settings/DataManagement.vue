@@ -3,13 +3,13 @@
     <!-- 主内容：插件列表 -->
     <Transition name="list-slide">
       <div v-show="currentLevel === 'main'" class="main-content">
-        <div v-if="isLoaded && pluginDataList.length === 0" class="empty">
+        <div v-if="isLoaded && filteredPluginDataList.length === 0" class="empty">
           <p>暂无插件数据</p>
         </div>
 
-        <div v-else-if="isLoaded && pluginDataList.length > 0" class="plugin-list">
+        <div v-else-if="isLoaded && filteredPluginDataList.length > 0" class="plugin-list">
           <div
-            v-for="pluginData in pluginDataList"
+            v-for="pluginData in filteredPluginDataList"
             :key="pluginData.pluginName"
             class="card plugin-card"
             :class="{ 'ztools-card': pluginData.pluginName === 'ZTOOLS' }"
@@ -36,7 +36,7 @@
 
             <div class="plugin-info">
               <h3 class="plugin-name">
-                {{ pluginData.pluginName === 'ZTOOLS' ? '主程序' : pluginData.pluginName }}
+                {{ getDisplayName(pluginData) }}
               </h3>
               <span class="doc-count"
                 >{{ pluginData.docCount }} 个文档 / {{ pluginData.attachmentCount }} 个附件</span
@@ -54,7 +54,7 @@
     <!-- 二级页面：文档列表 -->
     <DetailPanel
       v-show="currentLevel === 'docList'"
-      :title="`${currentPluginName === 'ZTOOLS' ? '主程序' : currentPluginName} - 文档列表`"
+      :title="`${getDisplayName(currentPluginName)} - 文档列表`"
       :class="docListAnimationClass"
       @back="closeDocListModal"
     >
@@ -107,14 +107,20 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useToast } from '../../composables/useToast'
+import { weightedSearch } from '../../utils/weightedSearch'
 import AdaptiveIcon from '../common/AdaptiveIcon.vue'
 import DetailPanel from '../common/DetailPanel.vue'
 import Icon from '../common/Icon.vue'
+
+const props = defineProps<{
+  searchQuery?: string
+}>()
 
 const { success, error, confirm } = useToast()
 
 interface PluginData {
   pluginName: string
+  pluginTitle?: string | null
   docCount: number
   attachmentCount: number
   logo: string | null
@@ -130,6 +136,23 @@ type PageLevel = 'main' | 'docList' | 'docDetail'
 
 const pluginDataList = ref<PluginData[]>([])
 const isLoaded = ref(false)
+
+// 获取插件显示名称（优先 title，回退到 name）
+function getDisplayName(data: PluginData | string): string {
+  if (typeof data === 'string') {
+    const found = pluginDataList.value.find((p) => p.pluginName === data)
+    return found?.pluginTitle || data
+  }
+  return data.pluginTitle || data.pluginName
+}
+
+const filteredPluginDataList = computed(() =>
+  weightedSearch(pluginDataList.value, props.searchQuery || '', [
+    { value: (p) => getDisplayName(p), weight: 10 },
+    { value: (p) => p.pluginName || '', weight: 3 }
+  ])
+)
+
 const currentLevel = ref<PageLevel>('main') // 当前页面层级
 const currentPluginName = ref('')
 const docKeys = ref<DocItem[]>([])
@@ -226,7 +249,7 @@ async function handleClearData(): Promise<void> {
   // 确认操作
   const confirmed = await confirm({
     title: '清空数据',
-    message: `确定要清空插件"${currentPluginName.value}"的所有数据吗？\n\n此操作将删除该插件的所有文档，无法恢复。`,
+    message: `确定要清空插件"${getDisplayName(currentPluginName.value)}"的所有数据吗？\n\n此操作将删除该插件的所有文档，无法恢复。`,
     type: 'danger',
     confirmText: '清空',
     cancelText: '取消'

@@ -1,5 +1,7 @@
 import { IpcMainInvokeEvent, ipcMain } from 'electron'
 import detachedWindowManager from '../../core/detachedWindowManager.js'
+import superPanelManager from '../../core/superPanelManager.js'
+import aiModelsAPI from '../renderer/aiModels.js'
 import commandsAPI from '../renderer/commands.js'
 import pluginsAPI from '../renderer/plugins.js'
 import settingsAPI from '../renderer/settings.js'
@@ -7,7 +9,6 @@ import systemAPI from '../renderer/system.js'
 import windowAPI from '../renderer/window.js'
 import databaseAPI from '../shared/database'
 import updaterAPI from '../updater.js'
-import aiModelsAPI from '../renderer/aiModels.js'
 
 /**
  * 权限错误类
@@ -360,7 +361,6 @@ export class InternalPluginAPI {
       this.mainWindow?.webContents.send('update-avatar', avatar)
 
       // 广播到超级面板窗口
-      const { default: superPanelManager } = await import('../../core/superPanelManager.js')
       superPanelManager.broadcastToSuperPanel('update-avatar', avatar)
 
       return { success: true }
@@ -545,8 +545,7 @@ export class InternalPluginAPI {
         if (!requireInternalPlugin(this.pluginManager, event)) {
           throw new PermissionDeniedError('internal:update-super-panel-config')
         }
-        // 转发给 superPanelManager（延迟导入避免循环依赖）
-        const { default: superPanelManager } = await import('../../core/superPanelManager.js')
+        // 转发给 superPanelManager
         superPanelManager.updateConfig(config)
         return { success: true }
       }

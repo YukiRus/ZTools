@@ -421,6 +421,7 @@ export class DatabaseAPI {
     success: boolean
     data?: Array<{
       pluginName: string
+      pluginTitle: string | null
       docCount: number
       attachmentCount: number
       logo: string | null
@@ -467,6 +468,7 @@ export class DatabaseAPI {
         const plugin = plugins.find((p: any) => p.name === pluginName)
         return {
           pluginName,
+          pluginTitle: plugin?.title || null,
           docCount: stats.docCount,
           attachmentCount: stats.attachmentCount,
           logo: plugin?.logo || null
@@ -493,6 +495,7 @@ export class DatabaseAPI {
       if (ztoolsDocCount > 0 || ztoolsAttachmentCount > 0) {
         data.unshift({
           pluginName: 'ZTOOLS',
+          pluginTitle: '主程序',
           docCount: ztoolsDocCount,
           attachmentCount: ztoolsAttachmentCount,
           logo: null // 主程序没有 logo，前端会显示特殊图标
@@ -678,6 +681,7 @@ export class DatabaseAPI {
     success: boolean
     data?: Array<{
       pluginName: string
+      pluginTitle: string | null
       docCount: number
       attachmentCount: number
       logo: string | null

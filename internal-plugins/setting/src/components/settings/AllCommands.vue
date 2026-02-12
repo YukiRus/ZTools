@@ -123,13 +123,17 @@
           <template
             v-if="selectedSource?.subType === 'app' || selectedSource?.subType === 'system-setting'"
           >
-            <CommandCard v-for="(cmd, index) in systemCommands" :key="index" :command="cmd" />
+            <CommandCard
+              v-for="(cmd, index) in filteredSystemCommands"
+              :key="index"
+              :command="cmd"
+            />
           </template>
 
           <!-- 插件：按 feature 分组显示 -->
           <template v-else>
             <FeatureCard
-              v-for="feature in groupedFeatures"
+              v-for="feature in filteredGroupedFeatures"
               v-show="feature.textCmds.length > 0"
               :key="feature.code"
               :feature="feature"
@@ -178,7 +182,7 @@
 
           <!-- 插件：按 feature 分组显示 -->
           <FeatureCard
-            v-for="feature in groupedFeatures"
+            v-for="feature in filteredGroupedFeatures"
             v-show="feature.matchCmds.length > 0"
             :key="feature.code"
             :feature="feature"
@@ -221,11 +225,16 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import settingsFillIcon from '../../assets/image/settings-fill.png'
+import { weightedSearch } from '../../utils/weightedSearch'
 import AdaptiveIcon from '../common/AdaptiveIcon.vue'
 import CommandCard from './common/CommandCard.vue'
 import CommandTag from './common/CommandTag.vue'
 import FeatureCard from './common/FeatureCard.vue'
 import TagDropdown, { type MenuItem } from './common/TagDropdown.vue'
+
+const props = defineProps<{
+  searchQuery?: string
+}>()
 
 // 定义 Command 类型（从 commandDataStore 复制）
 export type CommandType = 'direct' | 'plugin' | 'builtin'
@@ -633,27 +642,44 @@ const groupedFeatures = computed(() => {
   return Array.from(featureMap.values())
 })
 
-const hasCommands = computed(() => {
-  return (
-    systemCommands.value.length > 0 ||
-    groupedFeatures.value.some((f) => f.textCmds.length > 0 || f.matchCmds.length > 0)
-  )
+const filteredSystemCommands = computed(() =>
+  weightedSearch(systemCommands.value, props.searchQuery || '', [
+    { value: (c) => c.name || '', weight: 10 },
+    { value: (c) => c.path || '', weight: 3 }
+  ])
+)
+
+// 搜索过滤后的分组功能（按指令名过滤）
+const filteredGroupedFeatures = computed(() => {
+  const query = (props.searchQuery || '').trim().toLowerCase()
+  if (!query) return groupedFeatures.value
+  return groupedFeatures.value
+    .map((feature) => ({
+      ...feature,
+      textCmds: feature.textCmds.filter((cmd) => (cmd.name || '').toLowerCase().includes(query)),
+      matchCmds: feature.matchCmds.filter((cmd) => (cmd.name || '').toLowerCase().includes(query))
+    }))
+    .filter((f) => f.textCmds.length > 0 || f.matchCmds.length > 0)
 })
+
+const hasCommands = computed(
+  () => filteredSystemCommands.value.length > 0 || filteredGroupedFeatures.value.length > 0
+)
 
 const textFeaturesCount = computed(() => {
   if (
     selectedSource.value?.subType === 'app' ||
     selectedSource.value?.subType === 'system-setting'
   ) {
-    return systemCommands.value.length
+    return filteredSystemCommands.value.length
   }
   // 统计有功能指令的功能数量
-  return groupedFeatures.value.filter((f) => f.textCmds.length > 0).length
+  return filteredGroupedFeatures.value.filter((f) => f.textCmds.length > 0).length
 })
 
 const matchFeaturesCount = computed(() => {
   // 统计有匹配指令的功能数量
-  return groupedFeatures.value.filter((f) => f.matchCmds.length > 0).length
+  return filteredGroupedFeatures.value.filter((f) => f.matchCmds.length > 0).length
 })
 
 // 预计算每个插件的指令数量（一次遍历，避免 N 次全量 filter）
@@ -695,6 +721,8 @@ async function loadCommands(): Promise<void> {
 function selectSource(source: Source): void {
   selectedSource.value = source
   activeTab.value = 'text'
+  // 切换来源时清空搜索框
+  window.ztools.setSubInputValue('')
 }
 
 // 初始化

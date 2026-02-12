@@ -10,7 +10,7 @@
 
         <!-- 快捷键列表 -->
         <div class="shortcut-list">
-          <div v-for="shortcut in shortcuts" :key="shortcut.id" class="card shortcut-item">
+          <div v-for="shortcut in filteredShortcuts" :key="shortcut.id" class="card shortcut-item">
             <div class="shortcut-info">
               <div class="shortcut-key-display">{{ shortcut.shortcut }}</div>
               <div class="shortcut-desc">{{ shortcut.target }}</div>
@@ -89,10 +89,15 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useToast } from '../../composables/useToast'
+import { weightedSearch } from '../../utils/weightedSearch'
 import Icon from '../common/Icon.vue'
 import ShortcutEditor from './ShortcutEditor.vue'
+
+const props = defineProps<{
+  searchQuery?: string
+}>()
 
 const { success, error, warning, confirm } = useToast()
 
@@ -106,6 +111,13 @@ interface GlobalShortcut {
 // 快捷键列表
 const shortcuts = ref<GlobalShortcut[]>([])
 const isDeleting = ref(false)
+
+const filteredShortcuts = computed(() =>
+  weightedSearch(shortcuts.value, props.searchQuery || '', [
+    { value: (s) => s.shortcut || '', weight: 10 },
+    { value: (s) => s.target || '', weight: 5 }
+  ])
+)
 
 // 编辑器状态
 const showEditor = ref(false)
