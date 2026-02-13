@@ -27,6 +27,11 @@ function execCommand(command: string, args: string[] = []): void {
     })
   }
 
+  // 捕获子进程错误（如 EACCES），避免变成 uncaught exception
+  subprocess.on('error', (err) => {
+    console.error(`执行命令失败 [${command}]:`, err)
+  })
+
   // 不等待子进程，让 Node.js 可以继续执行
   subprocess.unref()
 }
@@ -131,10 +136,10 @@ export async function launchApp(
     }
   }
 
-  // .msc 文件 - 使用 mmc.exe 启动
+  // .msc 文件 - 通过 cmd.exe /c 启动 mmc.exe，让 cmd 正确解析 PATH
   if (ext === 'msc') {
     try {
-      execCommand('mmc.exe', [appPath])
+      execCommand(`mmc.exe ${appPath}`)
       console.log(`成功打开管理工具: ${appPath}`)
       return
     } catch (error) {
