@@ -62,6 +62,14 @@ export class AppsAPI {
     return this.launchParam
   }
 
+  /**
+   * 根据名称查找直接启动指令（系统应用、系统设置等）
+   */
+  public async findDirectCommandByName(name: string): Promise<any | null> {
+    const { commands } = await this.getCommands()
+    return commands.find((cmd: any) => cmd.type === 'direct' && cmd.name === name) || null
+  }
+
   private setupIPC(): void {
     ipcMain.handle('get-apps', () => this.getApps())
     ipcMain.handle('get-commands', () => this.getCommands())

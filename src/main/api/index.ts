@@ -193,83 +193,148 @@ class APIManager {
   }
 
   /**
+   * 在指定插件中查找匹配的命令
+   */
+  private findCommandInPlugin(
+    plugin: any,
+    cmdName: string
+  ): { feature: any; cmdLabel: string } | null {
+    const dynamicFeatures = pluginFeatureAPI.loadDynamicFeatures(plugin.name)
+    const allFeatures = [...(plugin.features || []), ...dynamicFeatures]
+
+    for (const feature of allFeatures) {
+      if (feature.cmds && Array.isArray(feature.cmds)) {
+        for (const cmd of feature.cmds) {
+          if (typeof cmd === 'object') continue
+          if (cmd === cmdName) {
+            return { feature, cmdLabel: cmd }
+          }
+        }
+      }
+    }
+    return null
+  }
+
+  /**
+   * 启动匹配到的插件命令
+   */
+  private launchMatchedPlugin(plugin: any, feature: any, cmdLabel: string): void {
+    const launchOptions = {
+      path: plugin.path,
+      type: 'plugin' as const,
+      featureCode: feature.code,
+      name: cmdLabel,
+      param: { code: feature.code }
+    }
+    console.log(`启动插件:`, launchOptions)
+
+    windowManager.refreshPreviousActiveWindow()
+
+    setTimeout(() => {
+      this.mainWindow?.show()
+    }, 50)
+
+    this.mainWindow?.webContents.send('ipc-launch', launchOptions)
+  }
+
+  /**
+   * 启动系统应用或系统设置（direct 类型指令）
+   */
+  private async launchDirectCommand(command: any): Promise<void> {
+    console.log('通过全局快捷键启动系统应用:', command.name, command.path)
+    await appsAPI.launch({
+      path: command.path,
+      type: 'direct',
+      name: command.name
+    })
+  }
+
+  /**
    * 处理全局快捷键触发
-   * 这个方法协调多个模块，所以放在 APIManager 中
+   * 支持两种格式：
+   *   - "插件名称/指令名称"（精确匹配指定插件）
+   *   - "指令名称"（在所有插件和系统应用中搜索，若多个匹配则提示）
    */
   private async handleGlobalShortcut(target: string): Promise<void> {
     try {
-      const parts = target.split('/')
-      if (parts.length !== 2) {
-        console.error('目标指令格式错误:', target)
-        return
-      }
-
-      const [pluginDescription, cmdName] = parts
       const plugins: any = await databaseAPI.dbGet('plugins')
-      if (!plugins || !Array.isArray(plugins)) {
-        console.error('未找到插件列表')
-        return
-      }
+      const pluginList = Array.isArray(plugins) ? plugins : []
 
-      const plugin = plugins.find((p: any) => p.title === pluginDescription)
-      if (!plugin) {
-        const msg = `未找到插件: ${pluginDescription}`
-        console.error(msg)
-        if (Notification.isSupported()) {
-          new Notification({ title: 'ZTools', body: msg }).show()
-        }
-        return
-      }
+      const parts = target.split('/')
 
-      // 合并动态 features（支持动态指令）
-      const dynamicFeatures = pluginFeatureAPI.loadDynamicFeatures(plugin.name)
-      const allFeatures = [...(plugin.features || []), ...dynamicFeatures]
-
-      let targetFeature: any = null
-      let targetCmdName: string = ''
-      for (const feature of allFeatures) {
-        if (feature.cmds && Array.isArray(feature.cmds)) {
-          for (const cmd of feature.cmds) {
-            if (typeof cmd === 'object') {
-              continue
-            }
-            const cmdLabel = cmd
-            if (cmdLabel === cmdName) {
-              targetFeature = feature
-              targetCmdName = cmdLabel
-              break
-            }
+      if (parts.length === 2) {
+        // 格式: 插件名称/指令名称
+        const [pluginDescription, cmdName] = parts
+        const plugin = pluginList.find(
+          (p: any) => p.name === pluginDescription || p.title === pluginDescription
+        )
+        if (!plugin) {
+          const msg = `未找到插件: ${pluginDescription}`
+          console.error(msg)
+          if (Notification.isSupported()) {
+            new Notification({ title: 'ZTools', body: msg }).show()
           }
-          if (targetFeature) break
+          return
+        }
+
+        const result = this.findCommandInPlugin(plugin, cmdName)
+        if (!result) {
+          const msg = `未找到命令: ${pluginDescription}/${cmdName}`
+          console.error(msg)
+          if (Notification.isSupported()) {
+            new Notification({ title: 'ZTools', body: msg }).show()
+          }
+          return
+        }
+
+        this.launchMatchedPlugin(plugin, result.feature, result.cmdLabel)
+      } else {
+        // 格式: 指令名称（在所有插件和系统应用中搜索）
+        const cmdName = target
+        const pluginMatches: { plugin: any; feature: any; cmdLabel: string }[] = []
+
+        for (const plugin of pluginList) {
+          const result = this.findCommandInPlugin(plugin, cmdName)
+          if (result) {
+            pluginMatches.push({ plugin, feature: result.feature, cmdLabel: result.cmdLabel })
+          }
+        }
+
+        // 同时查找系统应用（直接启动类型：应用、系统设置等）
+        const directCommand = await appsAPI.findDirectCommandByName(cmdName)
+
+        const totalMatches = pluginMatches.length + (directCommand ? 1 : 0)
+
+        if (totalMatches === 0) {
+          const msg = `未找到命令: ${cmdName}`
+          console.error(msg)
+          if (Notification.isSupported()) {
+            new Notification({ title: 'ZTools', body: msg }).show()
+          }
+          return
+        }
+
+        if (totalMatches > 1) {
+          const matchNames = pluginMatches.map((m) => m.plugin.title || m.plugin.name)
+          if (directCommand) {
+            matchNames.push(`系统应用「${directCommand.name}」`)
+          }
+          const msg = `多个指令匹配「${cmdName}」: ${matchNames.join('、')}，请使用「插件名称/${cmdName}」格式精确指定`
+          console.warn(msg)
+          if (Notification.isSupported()) {
+            new Notification({ title: 'ZTools', body: msg }).show()
+          }
+          return
+        }
+
+        // 唯一匹配，直接启动
+        if (pluginMatches.length === 1) {
+          const { plugin, feature, cmdLabel } = pluginMatches[0]
+          this.launchMatchedPlugin(plugin, feature, cmdLabel)
+        } else if (directCommand) {
+          await this.launchDirectCommand(directCommand)
         }
       }
-
-      if (!targetFeature) {
-        const msg = `未找到命令: ${pluginDescription}/${cmdName}`
-        console.error(msg)
-        if (Notification.isSupported()) {
-          new Notification({ title: 'ZTools', body: msg }).show()
-        }
-        return
-      }
-
-      const launchOptions = {
-        path: plugin.path,
-        type: 'plugin' as const,
-        featureCode: targetFeature.code,
-        name: targetCmdName, // 传递 cmd 名称
-        param: { code: targetFeature.code }
-      }
-      console.log(`启动插件:`, launchOptions)
-
-      windowManager.refreshPreviousActiveWindow()
-
-      setTimeout(() => {
-        this.mainWindow?.show()
-      }, 50)
-
-      // 通过 IPC 触发启动（让 appsAPI 处理）
-      this.mainWindow?.webContents.send('ipc-launch', launchOptions)
     } catch (error) {
       console.error('处理全局快捷键失败:', error)
     }
