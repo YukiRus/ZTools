@@ -1,25 +1,31 @@
 <template>
-  <div class="card command-card" :title="command.path || ''">
+  <div ref="cardRef" class="card command-card" :title="command.path || ''">
     <div class="command-icon">
-      <span v-if="command.icon && command.icon.length <= 2" class="icon-emoji">
-        {{ command.icon }}
-      </span>
-      <!-- 特殊图标使用渐变背景 -->
-      <div
-        v-else-if="command.icon && !hasError && command.needsIconFilter"
-        class="adaptive-icon"
-        :style="{ '--icon-url': `url(${command.icon})` }"
-      ></div>
-      <!-- 普通图标 -->
-      <AdaptiveIcon
-        v-else-if="command.icon && !hasError"
-        :src="command.icon"
-        draggable="false"
-        @error="handleIconError"
-      />
-      <div v-else class="icon-placeholder">
+      <!-- 未进入可视区域时显示轻量占位符 -->
+      <div v-if="!isVisible" class="icon-placeholder icon-lazy-placeholder">
         {{ command.name.charAt(0).toUpperCase() }}
       </div>
+      <template v-else>
+        <span v-if="command.icon && command.icon.length <= 2" class="icon-emoji">
+          {{ command.icon }}
+        </span>
+        <!-- 特殊图标使用渐变背景 -->
+        <div
+          v-else-if="command.icon && !hasError && command.needsIconFilter"
+          class="adaptive-icon"
+          :style="{ '--icon-url': `url(${command.icon})` }"
+        ></div>
+        <!-- 普通图标 -->
+        <AdaptiveIcon
+          v-else-if="command.icon && !hasError"
+          :src="command.icon"
+          draggable="false"
+          @error="handleIconError"
+        />
+        <div v-else class="icon-placeholder">
+          {{ command.name.charAt(0).toUpperCase() }}
+        </div>
+      </template>
     </div>
     <div class="command-details">
       <div class="command-title">{{ command.name }}</div>
@@ -39,7 +45,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import AdaptiveIcon from '../../common/AdaptiveIcon.vue'
 
 interface Command {
@@ -57,10 +63,36 @@ defineProps<{
 }>()
 
 const hasError = ref(false)
+const isVisible = ref(false)
+const cardRef = ref<HTMLElement | null>(null)
+let observer: IntersectionObserver | null = null
 
 function handleIconError(): void {
   hasError.value = true
 }
+
+onMounted(() => {
+  if (!cardRef.value) return
+
+  observer = new IntersectionObserver(
+    (entries) => {
+      if (entries[0]?.isIntersecting) {
+        isVisible.value = true
+        // 一旦可见就停止观察，图标不需要再隐藏回去
+        observer?.disconnect()
+        observer = null
+      }
+    },
+    { rootMargin: '200px' } // 提前 200px 开始加载，减少用户感知延迟
+  )
+
+  observer.observe(cardRef.value)
+})
+
+onUnmounted(() => {
+  observer?.disconnect()
+  observer = null
+})
 </script>
 
 <style scoped>
@@ -147,5 +179,10 @@ function handleIconError(): void {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* 懒加载占位符 - 轻量级骨架效果 */
+.icon-lazy-placeholder {
+  opacity: 0.4;
 }
 </style>

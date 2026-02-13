@@ -1,17 +1,23 @@
 <template>
-  <div class="card feature-card">
+  <div ref="cardRef" class="card feature-card">
     <div class="feature-header">
       <div v-if="feature.icon" class="feature-icon">
-        <span v-if="feature.icon.length <= 2" class="icon-emoji">{{ feature.icon }}</span>
-        <AdaptiveIcon
-          v-else-if="!hasError"
-          :src="feature.icon"
-          draggable="false"
-          @error="handleIconError"
-        />
-        <div v-else class="icon-placeholder">
+        <!-- 未进入可视区域时显示轻量占位符 -->
+        <div v-if="!isVisible" class="icon-placeholder icon-lazy-placeholder">
           {{ (feature.explain || feature.name || 'F').charAt(0).toUpperCase() }}
         </div>
+        <template v-else>
+          <span v-if="feature.icon.length <= 2" class="icon-emoji">{{ feature.icon }}</span>
+          <AdaptiveIcon
+            v-else-if="!hasError"
+            :src="feature.icon"
+            draggable="false"
+            @error="handleIconError"
+          />
+          <div v-else class="icon-placeholder">
+            {{ (feature.explain || feature.name || 'F').charAt(0).toUpperCase() }}
+          </div>
+        </template>
       </div>
       <div class="feature-title">
         {{ feature.explain || feature.name }}
@@ -24,7 +30,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import AdaptiveIcon from '../../common/AdaptiveIcon.vue'
 
 interface Feature {
@@ -39,10 +45,36 @@ defineProps<{
 }>()
 
 const hasError = ref(false)
+const isVisible = ref(false)
+const cardRef = ref<HTMLElement | null>(null)
+let observer: IntersectionObserver | null = null
 
 function handleIconError(): void {
   hasError.value = true
 }
+
+onMounted(() => {
+  if (!cardRef.value) return
+
+  observer = new IntersectionObserver(
+    (entries) => {
+      if (entries[0]?.isIntersecting) {
+        isVisible.value = true
+        // 一旦可见就停止观察，图标不需要再隐藏回去
+        observer?.disconnect()
+        observer = null
+      }
+    },
+    { rootMargin: '200px' } // 提前 200px 开始加载，减少用户感知延迟
+  )
+
+  observer.observe(cardRef.value)
+})
+
+onUnmounted(() => {
+  observer?.disconnect()
+  observer = null
+})
 </script>
 
 <style scoped>
@@ -112,5 +144,10 @@ function handleIconError(): void {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+/* 懒加载占位符 */
+.icon-lazy-placeholder {
+  opacity: 0.4;
 }
 </style>
