@@ -210,8 +210,9 @@ class APIManager {
         console.error('未找到插件列表')
         return
       }
-
-      const plugin = plugins.find((p: any) => p.title === pluginDescription)
+      const plugin = plugins.find(
+        (p: any) => p.name === pluginDescription || p.title === pluginDescription
+      )
       if (!plugin) {
         const msg = `未找到插件: ${pluginDescription}`
         console.error(msg)
