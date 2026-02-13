@@ -641,19 +641,23 @@ interface DragHandlers {
 
 const useDrag = (): DragHandlers => {
   let isDragging = false
+  let dragReady = false
   let offsetX = 0
   let offsetY = 0
 
   const onMove = (e: MouseEvent): void => {
+    // 安全检查：如果鼠标已经松开但状态未清理，主动取消拖拽
+    if (e.buttons === 0) {
+      cancelDrag()
+      return
+    }
     if (!isDragging) return
     window.ztools.setWindowPosition(e.screenX - offsetX, e.screenY - offsetY)
   }
 
   const onEnd = (e: MouseEvent): void => {
-    if (!isDragging) return
-    isDragging = false
-    window.ztools.setWindowSizeLock(false)
-    cleanup()
+    if (!isDragging && !dragReady) return
+    cancelDrag()
 
     const target = e.target as HTMLElement
     if (!target.closest('input') && !target.closest('.search-actions')) {
@@ -661,18 +665,31 @@ const useDrag = (): DragHandlers => {
     }
   }
 
+  const cancelDrag = (): void => {
+    isDragging = false
+    dragReady = false
+    window.ztools.setWindowSizeLock(false)
+    cleanup()
+  }
+
   const onStart = async (e: MouseEvent): Promise<void> => {
     const target = e.target as HTMLElement
     if (target === inputRef.value || target.closest('.search-actions')) return
 
+    // 同步注册监听器，防止 mouseup 在 await 期间丢失
+    dragReady = true
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onEnd)
+
     const { x, y } = await window.ztools.getWindowPosition()
+
+    // await 返回后检查：如果期间已经松开鼠标，则不进入拖拽
+    if (!dragReady) return
+
     offsetX = e.screenX - x
     offsetY = e.screenY - y
     isDragging = true
     window.ztools.setWindowSizeLock(true)
-
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onEnd)
   }
 
   const cleanup = (): void => {
