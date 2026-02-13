@@ -30,6 +30,136 @@ interface PluginViewInfo {
   isDevelopment?: boolean
 }
 class PluginManager {
+  // ==================== 插件配置/视图创建辅助方法 ====================
+
+  /**
+   * 从数据库查询插件信息
+   */
+  private async fetchPluginInfoFromDB(pluginPath: string): Promise<any> {
+    try {
+      const plugins = await api.dbGet('plugins')
+      if (plugins && Array.isArray(plugins)) {
+        return plugins.find((p: any) => p.path === pluginPath) || null
+      }
+    } catch (error) {
+      console.error('查询插件信息失败:', error)
+    }
+    return null
+  }
+
+  /**
+   * 读取 plugin.json 配置
+   */
+  private readPluginConfig(pluginPath: string): any {
+    const pluginJsonPath = path.join(pluginPath, 'plugin.json')
+    return JSON.parse(fsSync.readFileSync(pluginJsonPath, 'utf-8'))
+  }
+
+  /**
+   * 构建插件 logo 的 file:// URL
+   */
+  private buildPluginLogoUrl(pluginPath: string, logoRelPath?: string): string {
+    return logoRelPath ? pathToFileURL(path.join(pluginPath, logoRelPath)).href : ''
+  }
+
+  /**
+   * 解析插件入口 URL
+   * @returns pluginUrl（字符串）以及是否无界面插件
+   */
+  private resolvePluginUrl(
+    pluginPath: string,
+    pluginConfig: any,
+    isDevelopment: boolean
+  ): { pluginUrl: string; isConfigHeadless: boolean } {
+    const isConfigHeadless = !pluginConfig.main
+
+    if (isConfigHeadless) {
+      console.log('检测到无界面插件(Config):', pluginConfig.name)
+      return { pluginUrl: pathToFileURL(hideWindowHtml).href, isConfigHeadless }
+    }
+    if (isDevelopment && pluginConfig.development?.main) {
+      console.log('开发中插件，使用 development.main:', pluginConfig.development.main)
+      return { pluginUrl: pluginConfig.development.main, isConfigHeadless }
+    }
+    if (pluginConfig.main.startsWith('http')) {
+      console.log('网络插件:', pluginConfig.main)
+      return { pluginUrl: pluginConfig.main, isConfigHeadless }
+    }
+    return {
+      pluginUrl: pathToFileURL(path.join(pluginPath, pluginConfig.main)).href,
+      isConfigHeadless
+    }
+  }
+
+  /**
+   * 创建并配置插件的 session（注册 preload、代理、图标协议）
+   */
+  private async setupPluginSession(pluginName: string): Promise<Electron.Session> {
+    const sess = session.fromPartition('persist:' + pluginName)
+    sess.registerPreloadScript({ type: 'frame', filePath: mainPreload })
+    await proxyManager.applyProxyToSession(sess, `插件 ${pluginName}`)
+    if (isInternalPlugin(pluginName)) {
+      registerIconProtocolForSession(sess)
+    }
+    return sess
+  }
+
+  /**
+   * 创建插件的 WebContentsView 实例
+   */
+  private createPluginWebContentsView(
+    sess: Electron.Session,
+    preloadPath?: string
+  ): WebContentsView {
+    const view = new WebContentsView({
+      webPreferences: {
+        backgroundThrottling: false,
+        contextIsolation: false,
+        nodeIntegration: false,
+        webSecurity: false,
+        sandbox: false,
+        allowRunningInsecureContent: true,
+        webviewTag: true,
+        preload: preloadPath,
+        session: sess,
+        defaultFontSize: 14
+      }
+    })
+    view.setBackgroundColor('#00000000')
+    return view
+  }
+
+  /**
+   * 通知渲染进程：插件已打开
+   */
+  private sendPluginOpenedEvent(
+    pluginConfig: any,
+    pluginPath: string,
+    logoUrl: string,
+    cmdName: string,
+    subInputPlaceholder: string,
+    subInputVisible: boolean
+  ): void {
+    this.mainWindow?.webContents.send('plugin-opened', {
+      name: pluginConfig.name,
+      title: pluginConfig.title || pluginConfig.name,
+      logo: logoUrl,
+      path: pluginPath,
+      cmdName,
+      subInputPlaceholder,
+      subInputVisible
+    })
+  }
+
+  /**
+   * 通知渲染进程：插件页面已加载完成
+   */
+  private sendPluginLoadedEvent(pluginName: string, pluginPath: string): void {
+    this.mainWindow?.webContents.send('plugin-loaded', {
+      name: pluginName,
+      path: pluginPath
+    })
+  }
   private mainWindow: BrowserWindow | null = null
   private pluginView: WebContentsView | null = null
   private currentPluginPath: string | null = null
@@ -67,19 +197,14 @@ class PluginManager {
 
     console.log('准备加载插件:', { pluginPath, featureCode })
 
-    // 从数据库查询插件信息，确保 isDevelopment 准确
-    let pluginInfoFromDB: any = null
-    try {
-      const plugins = await api.dbGet('plugins')
-      if (plugins && Array.isArray(plugins)) {
-        pluginInfoFromDB = plugins.find((p: any) => p.path === pluginPath)
-      }
-    } catch (error) {
-      console.error('查询插件信息失败:', error)
-    }
+    const pluginInfoFromDB = await this.fetchPluginInfoFromDB(pluginPath)
 
     // 如果当前插件就是这个插件，直接返回
     if (this.currentPluginPath === pluginPath) {
+      const cached = this.pluginViews.find((v) => v.path === pluginPath)
+      if (cached) {
+        this.processPluginMode(pluginPath, featureCode, cached.view)
+      }
       return
     }
 
@@ -90,272 +215,139 @@ class PluginManager {
     // 先尝试从缓存中复用已有视图
     const cached = this.pluginViews.find((v) => v.path === pluginPath)
     if (cached) {
-      this.pluginView = cached.view
-      this.mainWindow.contentView.addChildView(this.pluginView)
-
-      // 之前已经加载过 直接让插件视图获取焦点
-      console.log('插件视图获取焦点')
-      this.pluginView.webContents.focus()
-
-      // 恢复之前的高度或使用默认高度
-      // 如果配置为无界面 (没有 main)，则初始设置为 0
-      const isConfigHeadless = !pluginInfoFromDB?.main
-
-      if (isConfigHeadless) {
-        this.setExpendHeight(0, false)
-      } else {
-        const viewHeight = cached.height || this.pluginDefaultHeight
-        this.setExpendHeight(viewHeight, false)
-      }
-
-      this.currentPluginPath = pluginPath
-
-      // 读取插件配置以获取logo和name
-      try {
-        const pluginJsonPath = path.join(pluginPath, 'plugin.json')
-        const pluginConfig = JSON.parse(fsSync.readFileSync(pluginJsonPath, 'utf-8'))
-
-        // 通知渲染进程插件已打开
-        this.mainWindow?.webContents.send('plugin-opened', {
-          name: pluginConfig.name,
-          title: pluginConfig.title || pluginConfig.name,
-          logo: pluginConfig.logo
-            ? pathToFileURL(path.join(pluginPath, pluginConfig.logo)).href
-            : '',
-          path: pluginPath,
-          cmdName: cmdName || '',
-          subInputPlaceholder: cached.subInputPlaceholder || '搜索',
-          subInputVisible: cached.subInputVisible !== undefined ? cached.subInputVisible : false // 默认隐藏
-        })
-
-        // 缓存视图已经加载完成，直接通知渲染进程加载完成
-        this.mainWindow?.webContents.send('plugin-loaded', {
-          name: pluginConfig.name,
-          path: pluginPath
-        })
-      } catch (error) {
-        console.error('读取插件配置失败:', error)
-      }
-
-      console.log('复用缓存的 Plugin BrowserView')
-
-      // 处理插件模式
-      this.processPluginMode(pluginPath, featureCode, this.pluginView)
+      this.restoreCachedPluginView(cached, pluginPath, pluginInfoFromDB, featureCode, cmdName)
       return
     }
 
-    // 读取插件配置
-    const pluginJsonPath = path.join(pluginPath, 'plugin.json')
+    // 缓存未命中，创建新的插件视图
+    await this.createNewPluginView(pluginPath, pluginInfoFromDB, featureCode, cmdName)
+  }
+
+  /**
+   * 恢复缓存的插件视图
+   */
+  private restoreCachedPluginView(
+    cached: PluginViewInfo,
+    pluginPath: string,
+    pluginInfoFromDB: any,
+    featureCode: string,
+    cmdName?: string
+  ): void {
+    if (!this.mainWindow) return
+
+    this.pluginView = cached.view
+    this.mainWindow.contentView.addChildView(this.pluginView)
+
+    console.log('插件视图获取焦点')
+    this.pluginView.webContents.focus()
+
+    // 恢复之前的高度或使用默认高度
+    const isConfigHeadless = !pluginInfoFromDB?.main
+    if (isConfigHeadless) {
+      this.setExpendHeight(0, false)
+    } else {
+      this.setExpendHeight(cached.height || this.pluginDefaultHeight, false)
+    }
+
+    this.currentPluginPath = pluginPath
+
+    // 读取插件配置并通知渲染进程
+    try {
+      const pluginConfig = this.readPluginConfig(pluginPath)
+      const logoUrl = this.buildPluginLogoUrl(pluginPath, pluginConfig.logo)
+
+      this.sendPluginOpenedEvent(
+        pluginConfig,
+        pluginPath,
+        logoUrl,
+        cmdName || '',
+        cached.subInputPlaceholder || '搜索',
+        cached.subInputVisible !== undefined ? cached.subInputVisible : false
+      )
+      this.sendPluginLoadedEvent(pluginConfig.name, pluginPath)
+    } catch (error) {
+      console.error('读取插件配置失败:', error)
+    }
+
+    console.log('复用缓存的 Plugin BrowserView')
+    this.processPluginMode(pluginPath, featureCode, this.pluginView)
+  }
+
+  /**
+   * 创建全新的插件视图（缓存未命中时调用）
+   */
+  private async createNewPluginView(
+    pluginPath: string,
+    pluginInfoFromDB: any,
+    featureCode: string,
+    cmdName?: string
+  ): Promise<void> {
+    if (!this.mainWindow) return
 
     try {
-      const pluginConfig = JSON.parse(fsSync.readFileSync(pluginJsonPath, 'utf-8'))
+      const pluginConfig = this.readPluginConfig(pluginPath)
+      const isDevelopment = !!pluginInfoFromDB?.isDevelopment
+      const { pluginUrl, isConfigHeadless } = this.resolvePluginUrl(
+        pluginPath,
+        pluginConfig,
+        isDevelopment
+      )
 
-      // 确定插件入口文件
-      let pluginUrl: string
-      const isConfigHeadless = !pluginConfig.main
-
-      if (isConfigHeadless) {
-        // 无界面插件，加载空白页面
-        console.log('检测到无界面插件(Config):', pluginConfig.name)
-        pluginUrl = pathToFileURL(hideWindowHtml).href
-      } else if (pluginInfoFromDB?.isDevelopment && pluginConfig.development?.main) {
-        // 开发中插件，使用 development.main
-        console.log('开发中插件，使用 development.main:', pluginConfig.development.main)
-        pluginUrl = pluginConfig.development.main
-      } else if (pluginConfig.main.startsWith('http')) {
-        // 网络插件
-        console.log('网络插件:', pluginConfig.main)
-        pluginUrl = pluginConfig.main
-      } else {
-        // 生产模式
-        pluginUrl = pathToFileURL(path.join(pluginPath, pluginConfig.main)).href
-      }
-
-      // 确定 preload 脚本路径
       const preloadPath = pluginConfig.preload
         ? path.join(pluginPath, pluginConfig.preload)
         : undefined
 
-      const sess = session.fromPartition('persist:' + pluginConfig.name)
-      sess.registerPreloadScript({
-        type: 'frame',
-        filePath: mainPreload
-      })
+      const sess = await this.setupPluginSession(pluginConfig.name)
+      this.pluginView = this.createPluginWebContentsView(sess, preloadPath)
 
-      // 应用代理配置到插件 session
-      await proxyManager.applyProxyToSession(sess, `插件 ${pluginConfig.name}`)
-
-      // 如果是内置插件，注册图标协议（外部插件不需要访问应用图标）
-      if (isInternalPlugin(pluginConfig.name)) {
-        registerIconProtocolForSession(sess)
-      }
-
-      // 创建 WebContentsView
-      this.pluginView = new WebContentsView({
-        webPreferences: {
-          backgroundThrottling: false,
-          contextIsolation: false,
-          nodeIntegration: false,
-          webSecurity: false,
-          sandbox: false,
-          allowRunningInsecureContent: true,
-          webviewTag: true,
-          preload: preloadPath,
-          session: sess,
-          defaultFontSize: 14 // 设置默认字体大小
-        }
-      })
-
-      // 设置透明背景，支持 fullscreen-ui 效果
-      this.pluginView.setBackgroundColor('#00000000')
-
-      // 禁用插件视图的默认开发者工具快捷键
-      // 这样我们可以自定义处理开发者工具的打开逻辑
-      this.pluginView.webContents.on('devtools-opened', () => {
-        console.log('插件开发者工具已打开')
-      })
-
-      // 监听插件视图的焦点事件,实时跟踪焦点状态
-      this.pluginView.webContents.on('focus', () => {
-        console.log('插件视图 webContents 获得焦点')
-        windowManager.updateFocusTarget('plugin')
-        // 注册开发者工具快捷键
-        if (this.pluginView && !this.pluginView.webContents.isDestroyed()) {
-          devToolsShortcut.register(this.pluginView.webContents)
-        }
-      })
-
-      this.pluginView.webContents.on('blur', () => {
-        // 注销开发者工具快捷键
-        devToolsShortcut.unregister()
-      })
-
-      // 监听 Cmd+D / Ctrl+D 和 Cmd+Q / Ctrl+Q 快捷键（ESC 改为在插件 preload 中通过 JS 拦截后再通过 IPC 通知）
-      this.pluginView.webContents.on('before-input-event', (event, input) => {
-        // Cmd+D / Ctrl+D: 分离插件到独立窗口
-        if (
-          input.type === 'keyDown' &&
-          (input.key === 'd' || input.key === 'D') &&
-          (input.meta || input.control)
-        ) {
-          event.preventDefault() // 阻止事件继续传播
-          console.log('插件视图检测到 Cmd+D 快捷键')
-          this.detachCurrentPlugin()
-        }
-
-        // Cmd+Q / Ctrl+Q: 终止插件并返回搜索页面
-        if (
-          input.type === 'keyDown' &&
-          (input.key === 'q' || input.key === 'Q') &&
-          (input.meta || input.control)
-        ) {
-          event.preventDefault() // 阻止事件继续传播到系统层（避免触发 app.quit）
-          console.log('插件视图检测到 Cmd+Q 快捷键，终止插件')
-          this.killCurrentPlugin()
-        }
-      })
-
-      // 监听插件进程崩溃或退出（例如调用 process.exit()）
-      this.pluginView.webContents.on('render-process-gone', (_event, details) => {
-        console.log('插件进程已退出:', {
-          pluginPath,
-          reason: details.reason,
-          exitCode: details.exitCode
-        })
-
-        // 发送插件退出事件（isKill=true 表示进程结束）
-        // 注意：此时 webContents 可能已经销毁，需要先检查
-        if (!this.pluginView?.webContents.isDestroyed()) {
-          this.pluginView?.webContents.send('plugin-out', true)
-        }
-
-        // 从缓存中移除该插件
-        const index = this.pluginViews.findIndex((v) => v.path === pluginPath)
-        if (index !== -1) {
-          this.pluginViews.splice(index, 1)
-          console.log('已从缓存中移除崩溃的插件:', pluginPath)
-        }
-
-        // 如果是当前显示的插件，隐藏并返回搜索页面
-        if (this.currentPluginPath === pluginPath) {
-          this.hidePluginView()
-          windowManager.notifyBackToSearch()
-          this.currentPluginPath = null
-          console.log('插件崩溃，已返回搜索页面')
-        }
-
-        // 关闭该插件创建的所有窗口
-        pluginWindowManager.closeByPlugin(pluginPath)
-      })
+      // 注册主窗口专属的事件监听
+      this.registerMainWindowPluginEvents(this.pluginView, pluginPath)
 
       this.mainWindow.contentView.addChildView(this.pluginView)
 
-      // 获取主窗口大小
+      // 设置初始布局
       const [windowWidth] = this.mainWindow.getSize()
-
       let initialViewHeight: number | null = null
 
-      if (isConfigHeadless) {
-        // 无界面插件 (Config)，初始设置为最小高度
-        this.pluginView.setBounds({ x: 0, y: WINDOW_INITIAL_HEIGHT, width: windowWidth, height: 0 })
-        api.resizeWindow(WINDOW_INITIAL_HEIGHT)
-      } else {
-        // 有界面插件，设置在主窗口搜索框内容的下方
-        const viewHeight = this.pluginDefaultHeight
-        initialViewHeight = viewHeight
+      this.pluginView.setBounds({ x: 0, y: WINDOW_INITIAL_HEIGHT, width: windowWidth, height: 0 })
+      api.resizeWindow(WINDOW_INITIAL_HEIGHT)
 
-        this.pluginView.setBounds({
-          x: 0,
-          y: WINDOW_INITIAL_HEIGHT,
-          width: windowWidth,
-          height: 0
-        })
-
-        // 初始只显示搜索框高度，待插件加载完成后恢复
-        api.resizeWindow(WINDOW_INITIAL_HEIGHT)
+      if (!isConfigHeadless) {
+        initialViewHeight = this.pluginDefaultHeight
       }
 
-      // 缓存新创建的视图 (提前缓存，以便 setSubInput 能找到)
+      // 缓存新创建的视图
+      const logoUrl = this.buildPluginLogoUrl(pluginPath, pluginConfig.logo)
       const pluginInfo: PluginViewInfo = {
         path: pluginPath,
         name: pluginConfig.name,
         view: this.pluginView,
-        subInputPlaceholder: '搜索', // 默认值
-        subInputVisible: false, // 默认隐藏子输入框（调用 setSubInput 后显示）
-        logo: pluginConfig.logo ? pathToFileURL(path.join(pluginPath, pluginConfig.logo)).href : '',
-        isDevelopment: !!pluginInfoFromDB?.isDevelopment
+        subInputPlaceholder: '搜索',
+        subInputVisible: false,
+        logo: logoUrl,
+        isDevelopment
       }
       this.pluginViews.push(pluginInfo)
       this.currentPluginPath = pluginPath
 
-      // 提前通知渲染进程插件已打开
-      this.mainWindow?.webContents.send('plugin-opened', {
-        name: pluginConfig.name,
-        title: pluginConfig.title || pluginConfig.name,
-        logo: pluginConfig.logo ? pathToFileURL(path.join(pluginPath, pluginConfig.logo)).href : '',
-        path: pluginPath,
-        cmdName: cmdName || '',
-        subInputPlaceholder: pluginInfo.subInputPlaceholder,
-        subInputVisible: pluginInfo.subInputVisible
-      })
+      // 通知渲染进程插件已打开
+      this.sendPluginOpenedEvent(
+        pluginConfig,
+        pluginPath,
+        logoUrl,
+        cmdName || '',
+        pluginInfo.subInputPlaceholder!,
+        pluginInfo.subInputVisible!
+      )
 
       const view = this.pluginView
-      // 加载插件页面
       view.webContents.loadURL(pluginUrl)
-      // 插件加载完成
+
       view.webContents.on('dom-ready', async () => {
-        // 注入全局滚动条样式（如果插件没有自定义）
         view.webContents.insertCSS(GLOBAL_SCROLLBAR_CSS)
-
         this.processPluginMode(pluginPath, featureCode, view)
+        this.sendPluginLoadedEvent(pluginConfig.name, pluginPath)
 
-        // 通知渲染进程插件页面已加载完成
-        this.mainWindow?.webContents.send('plugin-loaded', {
-          name: pluginConfig.name,
-          path: pluginPath
-        })
-
-        // 插件加载完成后恢复视图高度
         if (initialViewHeight !== null) {
           this.setExpendHeight(initialViewHeight, true)
         }
@@ -365,6 +357,79 @@ class PluginManager {
     } catch (error) {
       console.error('加载插件配置失败:', error)
     }
+  }
+
+  /**
+   * 为主窗口中运行的插件视图注册事件监听
+   * （devtools、焦点、快捷键、进程崩溃等）
+   */
+  private registerMainWindowPluginEvents(view: WebContentsView, pluginPath: string): void {
+    view.webContents.on('devtools-opened', () => {
+      console.log('插件开发者工具已打开')
+    })
+
+    view.webContents.on('focus', () => {
+      console.log('插件视图 webContents 获得焦点')
+      windowManager.updateFocusTarget('plugin')
+      if (this.pluginView && !this.pluginView.webContents.isDestroyed()) {
+        devToolsShortcut.register(this.pluginView.webContents)
+      }
+    })
+
+    view.webContents.on('blur', () => {
+      devToolsShortcut.unregister()
+    })
+
+    // Cmd+D / Ctrl+D 和 Cmd+Q / Ctrl+Q 快捷键
+    view.webContents.on('before-input-event', (event, input) => {
+      if (
+        input.type === 'keyDown' &&
+        (input.key === 'd' || input.key === 'D') &&
+        (input.meta || input.control)
+      ) {
+        event.preventDefault()
+        console.log('插件视图检测到 Cmd+D 快捷键')
+        this.detachCurrentPlugin()
+      }
+
+      if (
+        input.type === 'keyDown' &&
+        (input.key === 'q' || input.key === 'Q') &&
+        (input.meta || input.control)
+      ) {
+        event.preventDefault()
+        console.log('插件视图检测到 Cmd+Q 快捷键，终止插件')
+        this.killCurrentPlugin()
+      }
+    })
+
+    // 插件进程崩溃或退出
+    view.webContents.on('render-process-gone', (_event, details) => {
+      console.log('插件进程已退出:', {
+        pluginPath,
+        reason: details.reason,
+        exitCode: details.exitCode
+      })
+
+      if (!this.pluginView?.webContents.isDestroyed()) {
+        this.pluginView?.webContents.send('plugin-out', true)
+      }
+
+      const index = this.pluginViews.findIndex((v) => v.path === pluginPath)
+      if (index !== -1) {
+        this.pluginViews.splice(index, 1)
+        console.log('已从缓存中移除崩溃的插件:', pluginPath)
+      }
+
+      if (this.currentPluginPath === pluginPath) {
+        this.hidePluginView()
+        windowManager.notifyBackToSearch()
+        this.currentPluginPath = null
+        console.log('插件崩溃，已返回搜索页面')
+      }
+
+      pluginWindowManager.closeByPlugin(pluginPath)
+    })
   }
 
   // 发送消息到插件
@@ -875,78 +940,25 @@ class PluginManager {
     try {
       console.log('直接在独立窗口中创建插件:', { pluginPath, featureCode })
 
-      // 从数据库查询插件信息
-      let pluginInfoFromDB: any = null
-      try {
-        const plugins = await api.dbGet('plugins')
-        if (plugins && Array.isArray(plugins)) {
-          pluginInfoFromDB = plugins.find((p: any) => p.path === pluginPath)
-        }
-      } catch (error) {
-        console.error('查询插件信息失败:', error)
-      }
-
-      // 读取插件配置
-      const pluginJsonPath = path.join(pluginPath, 'plugin.json')
-      const pluginConfig = JSON.parse(fsSync.readFileSync(pluginJsonPath, 'utf-8'))
-
-      // 确定插件入口文件
-      let pluginUrl: string
-      const isConfigHeadless = !pluginConfig.main
+      const pluginInfoFromDB = await this.fetchPluginInfoFromDB(pluginPath)
+      const pluginConfig = this.readPluginConfig(pluginPath)
+      const isDevelopment = !!pluginInfoFromDB?.isDevelopment
+      const { pluginUrl, isConfigHeadless } = this.resolvePluginUrl(
+        pluginPath,
+        pluginConfig,
+        isDevelopment
+      )
 
       if (isConfigHeadless) {
-        // 无界面插件不支持独立窗口
         return { success: false, error: '无界面插件不支持在独立窗口中打开' }
-      } else if (pluginInfoFromDB?.isDevelopment && pluginConfig.development?.main) {
-        // 开发中插件
-        console.log('开发中插件，使用 development.main:', pluginConfig.development.main)
-        pluginUrl = pluginConfig.development.main
-      } else if (pluginConfig.main.startsWith('http')) {
-        // 网络插件
-        console.log('网络插件:', pluginConfig.main)
-        pluginUrl = pluginConfig.main
-      } else {
-        // 生产模式
-        pluginUrl = pathToFileURL(path.join(pluginPath, pluginConfig.main)).href
       }
 
-      // 确定 preload 脚本路径
       const preloadPath = pluginConfig.preload
         ? path.join(pluginPath, pluginConfig.preload)
         : undefined
 
-      const sess = session.fromPartition('persist:' + pluginConfig.name)
-      sess.registerPreloadScript({
-        type: 'frame',
-        filePath: mainPreload
-      })
-
-      // 应用代理配置到插件 session
-      await proxyManager.applyProxyToSession(sess, `插件 ${pluginConfig.name}`)
-
-      // 如果是内置插件，注册图标协议（外部插件不需要访问应用图标）
-      if (isInternalPlugin(pluginConfig.name)) {
-        registerIconProtocolForSession(sess)
-      }
-
-      // 创建 WebContentsView
-      const pluginView = new WebContentsView({
-        webPreferences: {
-          backgroundThrottling: false,
-          contextIsolation: false,
-          nodeIntegration: false,
-          webSecurity: false,
-          sandbox: false,
-          allowRunningInsecureContent: true,
-          webviewTag: true,
-          preload: preloadPath,
-          session: sess,
-          defaultFontSize: 14 // 设置默认字体大小
-        }
-      })
-
-      // 设置透明背景
-      pluginView.setBackgroundColor('#00000000')
+      const sess = await this.setupPluginSession(pluginConfig.name)
+      const pluginView = this.createPluginWebContentsView(sess, preloadPath)
 
       // 监听插件进程崩溃或退出
       pluginView.webContents.on('render-process-gone', (_event, details) => {
@@ -958,13 +970,10 @@ class PluginManager {
       })
 
       const storedSize = await this.getStoredDetachedSize(pluginConfig.name)
-      const defaultViewHeight = this.pluginDefaultHeight
-
-      // 获取默认窗口大小（若有历史记录则优先使用）
       const windowWidth = storedSize?.width ?? 800
-      const viewHeight = storedSize?.height ?? defaultViewHeight
+      const viewHeight = storedSize?.height ?? this.pluginDefaultHeight
+      const logoUrl = this.buildPluginLogoUrl(pluginPath, pluginConfig.logo)
 
-      // 创建独立窗口
       const detachedWindow = detachedWindowManager.createDetachedWindow(
         pluginPath,
         pluginConfig.name,
@@ -973,31 +982,23 @@ class PluginManager {
           width: windowWidth,
           height: viewHeight,
           title: pluginConfig.name,
-          logo: pluginConfig.logo
-            ? pathToFileURL(path.join(pluginPath, pluginConfig.logo)).href
-            : '',
+          logo: logoUrl,
           searchQuery: '',
           searchPlaceholder: '搜索...'
         }
       )
 
       if (!detachedWindow) {
-        // 清理创建的视图
         if (!pluginView.webContents.isDestroyed()) {
           pluginView.webContents.close()
         }
         return { success: false, error: '创建独立窗口失败' }
       }
 
-      // 加载插件页面
       pluginView.webContents.loadURL(pluginUrl)
 
-      // 插件加载完成后注入样式并发送启动事件
       pluginView.webContents.on('did-finish-load', async () => {
-        // 注入全局滚动条样式
         pluginView.webContents.insertCSS(GLOBAL_SCROLLBAR_CSS)
-
-        // 发送插件进入事件（独立窗口中的插件总是有界面的）
         pluginView.webContents.send('on-plugin-enter', api.getLaunchParam())
       })
 
