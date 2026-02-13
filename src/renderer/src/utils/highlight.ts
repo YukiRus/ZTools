@@ -29,6 +29,21 @@ export function highlightMatch(
     return highlightAcronym(text, query)
   }
 
+  // 优先尝试连续子串匹配：如果 query 能在 text 中连续找到，直接高亮连续部分
+  // 这避免了 Fuse.js 模糊匹配返回分散索引导致的高亮不连续问题
+  if (query) {
+    const lowerText = text.toLowerCase()
+    const lowerQuery = query.toLowerCase()
+    const substringIndex = lowerText.indexOf(lowerQuery)
+    if (substringIndex !== -1) {
+      // 找到了连续匹配，直接构建高亮结果
+      const before = escapeHtml(text.substring(0, substringIndex))
+      const matched = escapeHtml(text.substring(substringIndex, substringIndex + query.length))
+      const after = escapeHtml(text.substring(substringIndex + query.length))
+      return before + '<mark class="highlight">' + matched + '</mark>' + after
+    }
+  }
+
   // 收集所有需要高亮的字符索引
   const highlightIndices = new Set<number>()
 

@@ -570,53 +570,59 @@ export const useCommandDataStore = defineStore('commandData', () => {
     }
 
     // 1. Fuse.js 模糊搜索
-    // 如果指定了搜索范围，创建临时 Fuse 实例
-    const searchFuse = commandList
-      ? new Fuse(commandList, {
-          keys: [
-            { name: 'name', weight: 2 },
-            { name: 'pinyin', weight: 1.5 },
-            { name: 'pinyinAbbr', weight: 1 },
-            { name: 'acronym', weight: 1.5 }
-          ],
-          threshold: 0,
-          ignoreLocation: true,
-          includeScore: true,
-          includeMatches: true
-        })
-      : fuse.value
+    // 搜索词过长时跳过 Fuse.js（应用名/指令名通常很短，超长输入走模糊搜索无意义且浪费性能）
+    const FUSE_MAX_QUERY_LENGTH = 32
+    let bestMatches: SearchResult[] = []
 
-    const fuseResults = searchFuse.search(query)
-    const bestMatches = fuseResults
-      .map((r) => {
-        // 检测匹配类型（用于前端高亮算法选择）
-        let matchType: 'acronym' | 'name' | 'pinyin' | 'pinyinAbbr' | undefined
-        if (r.matches && r.matches.length > 0) {
-          // 优先级：acronym > name > pinyin > pinyinAbbr
-          if (r.matches.some((m) => m.key === 'acronym')) {
-            matchType = 'acronym'
-          } else if (r.matches.some((m) => m.key === 'name')) {
-            matchType = 'name'
-          } else if (r.matches.some((m) => m.key === 'pinyin')) {
-            matchType = 'pinyin'
-          } else if (r.matches.some((m) => m.key === 'pinyinAbbr')) {
-            matchType = 'pinyinAbbr'
+    if (query.length <= FUSE_MAX_QUERY_LENGTH) {
+      // 如果指定了搜索范围，创建临时 Fuse 实例
+      const searchFuse = commandList
+        ? new Fuse(commandList, {
+            keys: [
+              { name: 'name', weight: 2 },
+              { name: 'pinyin', weight: 1.5 },
+              { name: 'pinyinAbbr', weight: 1 },
+              { name: 'acronym', weight: 1.5 }
+            ],
+            threshold: 0,
+            ignoreLocation: true,
+            includeScore: true,
+            includeMatches: true
+          })
+        : fuse.value
+
+      const fuseResults = searchFuse.search(query)
+      bestMatches = fuseResults
+        .map((r) => {
+          // 检测匹配类型（用于前端高亮算法选择）
+          let matchType: 'acronym' | 'name' | 'pinyin' | 'pinyinAbbr' | undefined
+          if (r.matches && r.matches.length > 0) {
+            // 优先级：acronym > name > pinyin > pinyinAbbr
+            if (r.matches.some((m) => m.key === 'acronym')) {
+              matchType = 'acronym'
+            } else if (r.matches.some((m) => m.key === 'name')) {
+              matchType = 'name'
+            } else if (r.matches.some((m) => m.key === 'pinyin')) {
+              matchType = 'pinyin'
+            } else if (r.matches.some((m) => m.key === 'pinyinAbbr')) {
+              matchType = 'pinyinAbbr'
+            }
           }
-        }
 
-        return {
-          ...r.item,
-          matches: r.matches as MatchInfo[],
-          matchType,
-          _score: r.score || 0
-        }
-      })
-      .sort((a, b) => {
-        // 自定义排序：优先连续匹配
-        const scoreA = calculateMatchScore(a.name, query, a.matches)
-        const scoreB = calculateMatchScore(b.name, query, b.matches)
-        return scoreB - scoreA // 分数高的排前面
-      })
+          return {
+            ...r.item,
+            matches: r.matches as MatchInfo[],
+            matchType,
+            _score: r.score || 0
+          }
+        })
+        .sort((a, b) => {
+          // 自定义排序：优先连续匹配
+          const scoreA = calculateMatchScore(a.name, query, a.matches)
+          const scoreB = calculateMatchScore(b.name, query, b.matches)
+          return scoreB - scoreA // 分数高的排前面
+        })
+    }
 
     // 2. 匹配指令匹配（从 regexCommands 中查找，包括 regex 和 over 类型）
     const regexMatches: SearchResult[] = []
