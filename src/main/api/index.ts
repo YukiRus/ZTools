@@ -238,25 +238,34 @@ class APIManager {
   }
 
   /**
+   * 启动系统应用或系统设置（direct 类型指令）
+   */
+  private async launchDirectCommand(command: any): Promise<void> {
+    console.log('通过全局快捷键启动系统应用:', command.name, command.path)
+    await appsAPI.launch({
+      path: command.path,
+      type: 'direct',
+      name: command.name
+    })
+  }
+
+  /**
    * 处理全局快捷键触发
    * 支持两种格式：
    *   - "插件名称/指令名称"（精确匹配指定插件）
-   *   - "指令名称"（在所有插件中搜索，若多个插件匹配则提示）
+   *   - "指令名称"（在所有插件和系统应用中搜索，若多个匹配则提示）
    */
   private async handleGlobalShortcut(target: string): Promise<void> {
     try {
       const plugins: any = await databaseAPI.dbGet('plugins')
-      if (!plugins || !Array.isArray(plugins)) {
-        console.error('未找到插件列表')
-        return
-      }
+      const pluginList = Array.isArray(plugins) ? plugins : []
 
       const parts = target.split('/')
 
       if (parts.length === 2) {
         // 格式: 插件名称/指令名称
         const [pluginDescription, cmdName] = parts
-        const plugin = plugins.find(
+        const plugin = pluginList.find(
           (p: any) => p.name === pluginDescription || p.title === pluginDescription
         )
         if (!plugin) {
@@ -280,18 +289,23 @@ class APIManager {
 
         this.launchMatchedPlugin(plugin, result.feature, result.cmdLabel)
       } else {
-        // 格式: 指令名称（在所有插件中搜索）
+        // 格式: 指令名称（在所有插件和系统应用中搜索）
         const cmdName = target
-        const matches: { plugin: any; feature: any; cmdLabel: string }[] = []
+        const pluginMatches: { plugin: any; feature: any; cmdLabel: string }[] = []
 
-        for (const plugin of plugins) {
+        for (const plugin of pluginList) {
           const result = this.findCommandInPlugin(plugin, cmdName)
           if (result) {
-            matches.push({ plugin, feature: result.feature, cmdLabel: result.cmdLabel })
+            pluginMatches.push({ plugin, feature: result.feature, cmdLabel: result.cmdLabel })
           }
         }
 
-        if (matches.length === 0) {
+        // 同时查找系统应用（直接启动类型：应用、系统设置等）
+        const directCommand = await appsAPI.findDirectCommandByName(cmdName)
+
+        const totalMatches = pluginMatches.length + (directCommand ? 1 : 0)
+
+        if (totalMatches === 0) {
           const msg = `未找到命令: ${cmdName}`
           console.error(msg)
           if (Notification.isSupported()) {
@@ -300,9 +314,12 @@ class APIManager {
           return
         }
 
-        if (matches.length > 1) {
-          const pluginNames = matches.map((m) => m.plugin.title || m.plugin.name).join('、')
-          const msg = `多个插件包含指令「${cmdName}」: ${pluginNames}，请使用「插件名称/${cmdName}」格式精确指定`
+        if (totalMatches > 1) {
+          const matchNames = pluginMatches.map((m) => m.plugin.title || m.plugin.name)
+          if (directCommand) {
+            matchNames.push(`系统应用「${directCommand.name}」`)
+          }
+          const msg = `多个指令匹配「${cmdName}」: ${matchNames.join('、')}，请使用「插件名称/${cmdName}」格式精确指定`
           console.warn(msg)
           if (Notification.isSupported()) {
             new Notification({ title: 'ZTools', body: msg }).show()
@@ -311,8 +328,12 @@ class APIManager {
         }
 
         // 唯一匹配，直接启动
-        const { plugin, feature, cmdLabel } = matches[0]
-        this.launchMatchedPlugin(plugin, feature, cmdLabel)
+        if (pluginMatches.length === 1) {
+          const { plugin, feature, cmdLabel } = pluginMatches[0]
+          this.launchMatchedPlugin(plugin, feature, cmdLabel)
+        } else if (directCommand) {
+          await this.launchDirectCommand(directCommand)
+        }
       }
     } catch (error) {
       console.error('处理全局快捷键失败:', error)
