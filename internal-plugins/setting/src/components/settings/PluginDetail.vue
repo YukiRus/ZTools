@@ -1,5 +1,49 @@
 <template>
   <DetailPanel title="插件详情" @back="emit('back')">
+    <template #header-right>
+      <template v-if="plugin.installed && !canUpgrade">
+        <div class="topbar-settings-wrapper">
+          <button
+            class="icon-btn topbar-action-btn"
+            :class="{ active: showSettingsDropdown }"
+            title="插件设置"
+            @click.stop="toggleSettingsDropdown"
+          >
+            <Icon name="settings" size="16" />
+          </button>
+          <Transition name="dropdown">
+            <div v-if="showSettingsDropdown" class="settings-dropdown" @click.stop>
+              <div class="settings-dropdown-item">
+                <div class="settings-item-info">
+                  <span class="settings-item-label">退出即结束</span>
+                  <span class="settings-item-desc">退出到后台时立即终止插件进程</span>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" :checked="isAutoKill" @change="toggleAutoKill" />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+              <div class="settings-dropdown-item">
+                <div class="settings-item-info">
+                  <span class="settings-item-label">自动分离窗口</span>
+                  <span class="settings-item-desc">打开时自动分离为独立窗口</span>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" :checked="isAutoDetach" @change="toggleAutoDetach" />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+          </Transition>
+        </div>
+        <button class="icon-btn topbar-action-btn delete-btn" title="卸载" @click="handleUninstall">
+          <Icon name="trash" size="16" />
+        </button>
+        <button class="icon-btn topbar-action-btn" title="打开" @click="emit('open')">
+          <Icon name="play" size="16" />
+        </button>
+      </template>
+    </template>
     <!-- 插件基本信息 -->
     <div class="detail-content">
       <div class="detail-header">
@@ -35,10 +79,6 @@
               </div>
               <span v-else>升级到 v{{ plugin.version }}</span>
             </button>
-            <template v-else>
-              <button class="btn btn-md btn-danger" @click="handleUninstall">卸载</button>
-              <button class="btn btn-md" @click="emit('open')">打开</button>
-            </template>
           </template>
           <button
             v-else
@@ -316,8 +356,9 @@
 
 <script setup lang="ts">
 import { marked } from 'marked'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import DetailPanel from '../common/DetailPanel.vue'
+import Icon from '../common/Icon.vue'
 import CommandTag from './common/CommandTag.vue'
 import FeatureCard from './common/FeatureCard.vue'
 
@@ -361,6 +402,89 @@ const emit = defineEmits<{
   (e: 'upgrade'): void
   (e: 'uninstall'): void
 }>()
+
+// 插件设置状态
+const showSettingsDropdown = ref(false)
+const isAutoKill = ref(false)
+const isAutoDetach = ref(false)
+
+// 点击外部关闭下拉菜单
+function handleClickOutside(): void {
+  showSettingsDropdown.value = false
+}
+
+function toggleSettingsDropdown(): void {
+  showSettingsDropdown.value = !showSettingsDropdown.value
+}
+
+// 加载插件设置
+async function loadPluginSettings(): Promise<void> {
+  if (!props.plugin.name) return
+
+  try {
+    const killData = await window.ztools.internal.dbGet('outKillPlugin')
+    if (Array.isArray(killData)) {
+      isAutoKill.value = killData.includes(props.plugin.name)
+    }
+  } catch (error) {
+    console.debug('未找到 outKillPlugin 配置', error)
+  }
+
+  try {
+    const detachData = await window.ztools.internal.dbGet('autoDetachPlugin')
+    if (Array.isArray(detachData)) {
+      isAutoDetach.value = detachData.includes(props.plugin.name)
+    }
+  } catch (error) {
+    console.debug('未找到 autoDetachPlugin 配置', error)
+  }
+}
+
+// 切换「退出即结束」
+async function toggleAutoKill(): Promise<void> {
+  if (!props.plugin.name) return
+
+  let list: string[] = []
+  try {
+    const data = await window.ztools.internal.dbGet('outKillPlugin')
+    if (Array.isArray(data)) list = data
+  } catch {
+    // ignore
+  }
+
+  const index = list.indexOf(props.plugin.name)
+  if (index >= 0) {
+    list.splice(index, 1)
+  } else {
+    list.push(props.plugin.name)
+  }
+
+  await window.ztools.internal.dbPut('outKillPlugin', list)
+  isAutoKill.value = list.includes(props.plugin.name)
+}
+
+// 切换「自动分离窗口」
+async function toggleAutoDetach(): Promise<void> {
+  if (!props.plugin.name) return
+
+  let list: string[] = []
+  try {
+    const data = await window.ztools.internal.dbGet('autoDetachPlugin')
+    if (Array.isArray(data)) list = data
+  } catch {
+    // ignore
+  }
+
+  const index = list.indexOf(props.plugin.name)
+  if (index >= 0) {
+    list.splice(index, 1)
+  } else {
+    list.push(props.plugin.name)
+  }
+
+  await window.ztools.internal.dbPut('autoDetachPlugin', list)
+  isAutoDetach.value = list.includes(props.plugin.name)
+}
 
 // Tab 状态
 type TabId = 'detail' | 'commands' | 'data'
@@ -616,16 +740,131 @@ function openHomepage(): void {
   }
 }
 
-// 组件挂载时加载 README
+// 组件挂载时加载 README 和插件设置
 onMounted(() => {
   // 无论是否安装，只要有插件信息就尝试加载
   if (props.plugin.name || props.plugin.path) {
     loadReadme()
   }
+  if (props.plugin.installed && props.plugin.name) {
+    loadPluginSettings()
+  }
+  document.addEventListener('click', handleClickOutside)
 })
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
+
+// 插件变化时重新加载设置
+watch(
+  () => props.plugin.name,
+  () => {
+    if (props.plugin.installed && props.plugin.name) {
+      loadPluginSettings()
+    }
+  }
+)
 </script>
 
 <style scoped>
+/* 顶栏图标按钮 */
+.topbar-action-btn {
+  color: var(--text-secondary);
+  margin-left: 2px;
+}
+
+.topbar-action-btn:hover:not(:disabled) {
+  background: var(--hover-bg);
+  color: var(--primary-color);
+}
+
+.topbar-action-btn.delete-btn:hover:not(:disabled) {
+  color: var(--danger-color, #e74c3c);
+}
+
+/* 设置按钮容器 */
+.topbar-settings-wrapper {
+  position: relative;
+}
+
+.topbar-action-btn.active {
+  background: var(--hover-bg);
+  color: var(--primary-color);
+}
+
+/* 设置下拉菜单 */
+.settings-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 240px;
+  background: var(--dialog-bg, var(--bg-color));
+  border: 1px solid var(--divider-color);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px var(--shadow-color);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.settings-dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  gap: 12px;
+}
+
+.settings-dropdown-item + .settings-dropdown-item {
+  border-top: 1px solid var(--divider-color);
+}
+
+.settings-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-item-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.settings-item-desc {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.3;
+}
+
+/* 缩小 toggle 开关以适配下拉菜单 */
+.settings-dropdown .toggle {
+  transform: scale(0.8);
+  transform-origin: right center;
+  flex-shrink: 0;
+}
+
+/* 下拉菜单过渡动画 */
+.dropdown-enter-active {
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+
+.dropdown-leave-active {
+  transition:
+    opacity 0.1s ease,
+    transform 0.1s ease;
+}
+
+.dropdown-enter-from,
+.dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-4px) scale(0.98);
+}
+
 .detail-content {
   padding: 16px;
 }

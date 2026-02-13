@@ -6,6 +6,8 @@
         <Icon name="back" size="18" />
       </button>
       <div class="topbar-title">{{ title }}</div>
+      <div class="topbar-spacer"></div>
+      <slot name="header-right" />
     </div>
 
     <div class="detail-scrollable">
@@ -119,6 +121,10 @@ const emit = defineEmits<{
 .topbar-title {
   font-size: 14px;
   color: var(--text-secondary);
+}
+
+.topbar-spacer {
+  flex: 1;
 }
 
 .detail-scrollable {
