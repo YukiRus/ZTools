@@ -20,9 +20,9 @@
             v-model="targetCommand"
             type="text"
             class="input"
-            placeholder="格式: 插件名称/指令名称，例如: 翻译/translate"
+            placeholder="例如: 翻译"
           />
-          <span class="form-hint">格式: 插件名称/指令名称（支持动态指令）</span>
+          <span class="form-hint">支持「指令名称」或「插件名称/指令名称」格式，建议加上插件名称以避免歧义</span>
         </div>
       </div>
 
