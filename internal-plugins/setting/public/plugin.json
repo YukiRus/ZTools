@@ -36,6 +36,19 @@
       "cmds": ["插件市场"]
     },
     {
+      "code": "plugin-market-search",
+      "explain": "插件市场搜索",
+      "icon": "logo.png",
+      "cmds": [
+        {
+          "type": "over",
+          "label": "插件市场搜索",
+          "minLength": 1,
+          "maxLength": 50
+        }
+      ]
+    },
+    {
       "code": "data",
       "explain": "我的数据",
       "icon": "logo.png",
