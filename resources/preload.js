@@ -574,6 +574,11 @@ window.ztools = {
     notifyDisabledCommandsChanged: async () =>
       await electron.ipcRenderer.invoke('internal:notify-disabled-commands-changed'),
 
+    // 固定/取消固定指令到搜索窗口
+    pinApp: async (app) => await electron.ipcRenderer.invoke('internal:pin-app', app),
+    unpinApp: async (appPath, featureCode, name) =>
+      await electron.ipcRenderer.invoke('internal:unpin-app', appPath, featureCode, name),
+
     // ==================== 图片分析 API ====================
     analyzeImage: async (imagePath) =>
       await electron.ipcRenderer.invoke('internal:analyze-image', imagePath),

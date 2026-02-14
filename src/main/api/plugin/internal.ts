@@ -538,6 +538,25 @@ export class InternalPluginAPI {
       return { success: true }
     })
 
+    // 固定指令到搜索窗口
+    ipcMain.handle('internal:pin-app', async (event, app: any) => {
+      if (!requireInternalPlugin(this.pluginManager, event)) {
+        throw new PermissionDeniedError('internal:pin-app')
+      }
+      return await (commandsAPI as any).pinApp(app)
+    })
+
+    // 取消固定指令
+    ipcMain.handle(
+      'internal:unpin-app',
+      async (event, appPath: string, featureCode?: string, name?: string) => {
+        if (!requireInternalPlugin(this.pluginManager, event)) {
+          throw new PermissionDeniedError('internal:unpin-app')
+        }
+        return await (commandsAPI as any).unpinApp(appPath, featureCode, name)
+      }
+    )
+
     // ==================== 超级面板 API ====================
     ipcMain.handle(
       'internal:update-super-panel-config',

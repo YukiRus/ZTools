@@ -287,6 +287,10 @@ declare global {
 
         // 通知主渲染进程禁用指令列表已更改
         notifyDisabledCommandsChanged: () => Promise<{ success: boolean }>
+
+        // 固定/取消固定指令到搜索窗口
+        pinApp: (app: any) => Promise<void>
+        unpinApp: (appPath: string, featureCode?: string, name?: string) => Promise<void>
       }
     }
   }

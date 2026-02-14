@@ -288,6 +288,10 @@ const DISABLED_COMMANDS_KEY = 'disable-commands'
 const superPanelPinned = ref<any[]>([])
 const SUPER_PANEL_PINNED_KEY = 'super-panel-pinned'
 
+// 搜索窗口固定列表
+const searchPinned = ref<any[]>([])
+const SEARCH_PINNED_KEY = 'pinned-commands'
+
 // 生成指令唯一标识
 // 格式: pluginName:featureCode:cmdName:cmdType
 function getCommandId(
@@ -425,6 +429,52 @@ async function toggleSuperPanelPin(
   }
 }
 
+// 加载搜索窗口固定列表
+async function loadSearchPinned(): Promise<void> {
+  try {
+    const data = await window.ztools.internal.dbGet(SEARCH_PINNED_KEY)
+    if (data && Array.isArray(data)) {
+      searchPinned.value = data
+    }
+  } catch (error) {
+    console.error('加载搜索固定列表失败:', error)
+  }
+}
+
+// 检查指令是否已固定到搜索窗口
+function isPinnedToSearch(featureCode: string): boolean {
+  return searchPinned.value.some(
+    (item) => item.path === selectedSource.value?.path && item.featureCode === featureCode
+  )
+}
+
+// 固定/取消固定到搜索窗口
+async function toggleSearchPin(
+  pluginName: string,
+  featureCode: string,
+  cmdName: string
+): Promise<void> {
+  const pinned = isPinnedToSearch(featureCode)
+
+  if (pinned) {
+    // 取消固定
+    await window.ztools.internal.unpinApp(selectedSource.value?.path || '', featureCode, cmdName)
+  } else {
+    // 查找对应的指令信息
+    const command = commands.value.find(
+      (c) =>
+        c.path === selectedSource.value?.path && c.featureCode === featureCode && c.name === cmdName
+    )
+
+    if (command) {
+      await window.ztools.internal.pinApp(JSON.parse(JSON.stringify(command)))
+    }
+  }
+
+  // 重新加载固定列表
+  await loadSearchPinned()
+}
+
 // 下拉菜单项
 function getMenuItems(
   isDisabled: boolean,
@@ -449,6 +499,14 @@ function getMenuItems(
       items.push({
         key: 'pin-super-panel',
         label: pinned ? '取消固定超级面板' : '固定到超级面板',
+        icon: 'pin'
+      })
+
+      // 固定到搜索窗口
+      const searchPinnedState = isPinnedToSearch(featureCode)
+      items.push({
+        key: 'pin-search',
+        label: searchPinnedState ? '取消固定搜索' : '固定到搜索',
         icon: 'pin'
       })
 
@@ -488,6 +546,9 @@ async function handleMenuSelect(
   } else if (key === 'pin-super-panel') {
     // 固定/取消固定到超级面板
     await toggleSuperPanelPin(pluginName, featureCode, cmdName)
+  } else if (key === 'pin-search') {
+    // 固定/取消固定到搜索窗口
+    await toggleSearchPin(pluginName, featureCode, cmdName)
   } else if (key === 'set-global-shortcut') {
     // 跳转到全局快捷键页面并打开添加面板，预填目标指令（插件标题/指令名称）
     const pluginTitle = selectedSource.value?.title || pluginName
@@ -746,7 +807,7 @@ onMounted(async () => {
   loading.value = true
   try {
     // 并行加载禁用指令和超级面板固定列表（互不依赖）
-    await Promise.all([loadDisabledCommands(), loadSuperPanelPinned()])
+    await Promise.all([loadDisabledCommands(), loadSuperPanelPinned(), loadSearchPinned()])
     // 加载指令数据（内含 plugins，无需再单独请求）
     await loadCommands()
     // 默认选中系统应用
