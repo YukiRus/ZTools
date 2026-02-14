@@ -54,6 +54,7 @@ onMounted(() => {
       shortcuts: 'shortcuts',
       plugins: 'plugins',
       'plugin-market': 'market',
+      'plugin-market-search': 'market',
       'ai-models': 'ai-models',
       data: 'data',
       'all-commands': 'all-commands',
@@ -66,6 +67,12 @@ onMounted(() => {
 
     // 根据页面决定是否显示搜索框
     updateSubInput(targetPage)
+
+    // 插件市场搜索：将用户输入的文本预填到搜索框
+    if (action.code === 'plugin-market-search' && action.payload) {
+      searchQuery.value = action.payload
+      window.ztools.setSubInputValue(action.payload)
+    }
   })
 
   window.ztools.onPluginOut(() => {

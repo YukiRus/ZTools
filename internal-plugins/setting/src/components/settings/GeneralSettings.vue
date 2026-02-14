@@ -534,37 +534,6 @@
         />
       </div>
     </div>
-
-    <!-- 自动检查更新 -->
-    <div class="setting-item">
-      <div class="setting-label">
-        <span>自动检查更新</span>
-        <span class="setting-desc">开启后将定期检查软件更新</span>
-      </div>
-      <div class="setting-control">
-        <label class="toggle">
-          <input v-model="autoCheckUpdate" type="checkbox" @change="handleAutoCheckUpdateChange" />
-          <span class="toggle-slider"></span>
-        </label>
-      </div>
-    </div>
-
-    <!-- 软件更新 -->
-    <div class="setting-item">
-      <div class="setting-label">
-        <span>软件信息</span>
-        <div class="version-info">
-          <div>当前版本: {{ appVersion }}</div>
-          <div class="versions-detail">
-            Electron: {{ versions.electron }} | Node: {{ versions.node }} | Chrome:
-            {{ versions.chrome }}
-          </div>
-        </div>
-      </div>
-      <div class="setting-control">
-        <button class="btn" @click="handleCheckUpdate">检查更新</button>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -585,7 +554,7 @@ import Dropdown from '../common/Dropdown.vue'
 import HotkeyInput from '../common/HotkeyInput.vue'
 import Slider from '../common/Slider.vue'
 
-const { error, info, confirm } = useToast()
+const { error, info } = useToast()
 
 // Dropdown 选项数据
 const themeOptions = [
@@ -736,10 +705,8 @@ const acrylicDarkOpacity = ref(50) // 暗黑模式默认 50%
 // 颜色选择器引用
 const colorPickerInput = ref<HTMLInputElement | null>(null)
 
-// 软件版本
-const appVersion = ref('')
-const versions = ref({ electron: '', node: '', chrome: '' })
-const isCheckingUpdate = ref(false)
+// 自动检查更新（保留用于设置持久化）
+const autoCheckUpdate = ref(true)
 
 // 主题色选项
 const themeColors = [
@@ -1288,61 +1255,19 @@ function isValidProxyUrl(url: string): boolean {
   }
 }
 
-// 获取应用版本
-async function getAppVersion(): Promise<void> {
+// ==================== 自定义颜色相关辅助函数 ====================
+
+// 获取平台信息（用于快捷键文案）
+async function getPlatformInfo(): Promise<void> {
   try {
-    appVersion.value = await window.ztools.internal.getAppVersion()
-    const vs = await window.ztools.internal.getSystemVersions()
-    versions.value = {
-      electron: vs.electron || '未知',
-      node: vs.node || '未知',
-      chrome: vs.chrome || '未知'
-    }
-    // 获取平台信息，用于快捷键文案（mac 显示 Option，Windows 显示 Alt）
     const pf = await window.ztools.internal.getPlatform()
     if (pf === 'darwin' || pf === 'win32' || pf === 'linux') {
       platform.value = pf
     }
   } catch (error) {
-    console.error('获取版本失败:', error)
-    appVersion.value = '未知'
+    console.error('获取平台信息失败:', error)
   }
 }
-
-// 检查更新
-async function handleCheckUpdate(): Promise<void> {
-  if (isCheckingUpdate.value) return
-  isCheckingUpdate.value = true
-
-  try {
-    const result = await window.ztools.internal.updaterCheckUpdate()
-    if (result.hasUpdate) {
-      const shouldUpdate = await confirm({
-        title: '发现新版本',
-        message: `发现新版本 ${result.latestVersion}，是否立即更新？\n\n更新内容：\n${result.updateInfo?.releaseNotes || '无'}`,
-        type: 'info',
-        confirmText: '立即更新',
-        cancelText: '稍后'
-      })
-      if (shouldUpdate) {
-        await window.ztools.internal.updaterStartUpdate(result.updateInfo)
-      }
-    } else {
-      if (result.error) {
-        error('检查更新出错: ' + result.error)
-      } else {
-        info('当前已是最新版本')
-      }
-    }
-  } catch (err: any) {
-    console.error('检查更新失败:', err)
-    error('检查更新失败: ' + (err.message || '未知错误'))
-  } finally {
-    isCheckingUpdate.value = false
-  }
-}
-
-// ==================== 自定义颜色相关辅助函数 ====================
 
 // 应用自定义颜色
 function applyCustomColor(color: string): void {
@@ -1481,9 +1406,6 @@ function rgbToHex(r: number, g: number, b: number): string {
   return '#' + [r, g, b].map((x) => x.toString(16).padStart(2, '0')).join('')
 }
 
-// 自动检查更新
-const autoCheckUpdate = ref(true)
-
 // ==================== 数据持久化 ====================
 
 // 加载设置
@@ -1597,22 +1519,10 @@ async function saveSettings(): Promise<void> {
   }
 }
 
-// 处理自动检查更新设置变化
-async function handleAutoCheckUpdateChange(): Promise<void> {
-  try {
-    await saveSettings()
-    // 通知主进程更新
-    await window.ztools.internal.updaterSetAutoCheck(autoCheckUpdate.value)
-    console.log('自动检查更新设置已更新:', autoCheckUpdate.value)
-  } catch (error) {
-    console.error('更新自动检查更新设置失败:', error)
-  }
-}
-
 // 初始化时加载设置
 onMounted(() => {
   loadSettings()
-  getAppVersion()
+  getPlatformInfo()
 })
 </script>
 
@@ -1655,19 +1565,6 @@ onMounted(() => {
 .setting-desc {
   font-size: 13px;
   color: var(--text-secondary);
-}
-
-.version-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-.versions-detail {
-  font-size: 12px;
-  opacity: 0.8;
 }
 
 .setting-control {
