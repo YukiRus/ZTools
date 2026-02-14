@@ -195,7 +195,17 @@ export const useCommandDataStore = defineStore('commandData', () => {
     try {
       const data = await window.ztools.dbGet('search-preference')
       if (data && typeof data === 'object') {
-        searchPreference.value = data
+        const convertedData: Record<string, { path: string; featureCode?: string; name: string }[]> = {}
+        
+        for (const [key, value] of Object.entries(data)) {
+          if (Array.isArray(value)) {
+            convertedData[key] = value
+          } else if (value && typeof value === 'object' && 'path' in value) {
+            convertedData[key] = [value as { path: string; featureCode?: string; name: string }]
+          }
+        }
+        
+        searchPreference.value = convertedData
       }
     } catch (error) {
       console.error('加载搜索偏好记录失败:', error)
@@ -692,28 +702,6 @@ export const useCommandDataStore = defineStore('commandData', () => {
           const scoreB = calculateMatchScore(b.name, query, b.matches)
           return scoreB - scoreA // 分数高的排前面
         })
-
-      // 搜索偏好置顶：按历史使用顺序排序（最新的在前）
-      const prefKey = query.trim().toLowerCase()
-      const prefHistory = searchPreference.value[prefKey]
-      if (prefHistory && prefHistory.length > 0) {
-        bestMatches.sort((a, b) => {
-          const indexA = prefHistory.findIndex(
-            (pref) =>
-              a.path === pref.path && a.featureCode === pref.featureCode && a.name === pref.name
-          )
-          const indexB = prefHistory.findIndex(
-            (pref) =>
-              b.path === pref.path && b.featureCode === pref.featureCode && b.name === pref.name
-          )
-          if (indexA !== -1 && indexB !== -1) {
-            return indexA - indexB
-          }
-          if (indexA !== -1) return -1
-          if (indexB !== -1) return 1
-          return 0
-        })
-      }
     }
 
     // 2. 匹配指令匹配（从 regexCommands 中查找，包括 regex 和 over 类型）
@@ -777,6 +765,29 @@ export const useCommandDataStore = defineStore('commandData', () => {
     const processedRegexMatches = regexMatches
       .filter((cmd) => !isCommandDisabled(cmd))
       .map((cmd) => applySpecialConfig(cmd))
+
+    // 搜索偏好排序：按历史使用顺序排序（最新的在前）
+    // 注意：这个排序应该在 processedBestMatches 上应用，确保最终结果按历史顺序排列
+    const prefKey = query.trim().toLowerCase()
+    const prefHistory = searchPreference.value[prefKey]
+    if (prefHistory && prefHistory.length > 0 && processedBestMatches.length > 0) {
+      processedBestMatches.sort((a, b) => {
+        const indexA = prefHistory.findIndex(
+          (pref) =>
+            a.path === pref.path && a.featureCode === pref.featureCode && a.name === pref.name
+        )
+        const indexB = prefHistory.findIndex(
+          (pref) =>
+            b.path === pref.path && b.featureCode === pref.featureCode && b.name === pref.name
+        )
+        if (indexA !== -1 && indexB !== -1) {
+          return indexA - indexB
+        }
+        if (indexA !== -1) return -1
+        if (indexB !== -1) return 1
+        return 0
+      })
+    }
 
     // 如果指定了搜索范围（用于粘贴内容的二次搜索），不需要 regexMatches
     if (commandList) {
