@@ -353,6 +353,12 @@ onMounted(async () => {
     searchInputRef.value?.focus()
   })
 
+  // 监听选中子输入框内容
+  window.electron.ipcRenderer.on('select-sub-input', () => {
+    searchInputRef.value?.focus()
+    searchInputRef.value?.select()
+  })
+
   // 监听子输入框可见性更新（插件调用 removeSubInput 时触发）
   window.electron.ipcRenderer.on('update-sub-input-visible', (visible: boolean) => {
     console.log('更新子输入框可见性:', visible)

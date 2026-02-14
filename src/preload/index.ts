@@ -217,6 +217,9 @@ const api = {
   onFocusSubInput: (callback: () => void) => {
     ipcRenderer.on('focus-sub-input', callback)
   },
+  onSelectSubInput: (callback: () => void) => {
+    ipcRenderer.on('select-sub-input', callback)
+  },
   onUpdateSubInputPlaceholder: (
     callback: (data: { pluginPath: string; placeholder: string }) => void
   ) => {

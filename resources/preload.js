@@ -112,6 +112,11 @@ window.ztools = {
     console.log('插件请求子输入框失去焦点')
     return electron.ipcRenderer.sendSync('sub-input-blur')
   },
+  // 子输入框获得焦点并选中内容
+  subInputSelect: () => {
+    console.log('插件请求选中子输入框内容')
+    return electron.ipcRenderer.sendSync('sub-input-select')
+  },
   // 标准数据库 API - 完全兼容 UTools
   // 同步版本（供插件使用）
   db: {

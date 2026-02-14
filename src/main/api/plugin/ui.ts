@@ -39,6 +39,9 @@ export class PluginUIAPI {
     ipcMain.on('sub-input-blur', (event) => {
       event.returnValue = this.subInputBlur(event)
     })
+    ipcMain.on('sub-input-select', (event) => {
+      event.returnValue = this.subInputSelect(event)
+    })
 
     // 隐藏插件
     ipcMain.on('hide-plugin', () => this.hidePlugin())
@@ -267,6 +270,27 @@ export class PluginUIAPI {
       }
     } catch (error: unknown) {
       console.error('插件获取焦点失败:', error)
+      return false
+    }
+  }
+
+  private subInputSelect(event?: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent): boolean {
+    try {
+      const targetWindow = event
+        ? detachedWindowManager.getWindowByPluginWebContents(event.sender.id) || this.mainWindow
+        : this.mainWindow
+
+      if (!targetWindow) {
+        console.warn('无法找到目标窗口')
+        return false
+      }
+
+      targetWindow.webContents.focus()
+      targetWindow.webContents.send('select-sub-input')
+
+      return true
+    } catch (error: unknown) {
+      console.error('选中子输入框失败:', error)
       return false
     }
   }

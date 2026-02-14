@@ -510,6 +510,14 @@ onMounted(async () => {
     })
   })
 
+  // 监听选中子输入框内容事件
+  window.ztools.onSelectSubInput(() => {
+    nextTick(() => {
+      searchBoxRef.value?.focus()
+      searchBoxRef.value?.selectAll()
+    })
+  })
+
   // 监听显示插件占位区域事件（插件启动前）
   window.ztools.onShowPluginPlaceholder(() => {
     console.log('显示插件占位区域')

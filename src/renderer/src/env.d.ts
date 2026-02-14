@@ -217,6 +217,7 @@ declare global {
       setSubInputValue: (text: string) => Promise<boolean>
       onSetSubInputValue: (callback: (text: string) => void) => void
       onFocusSubInput: (callback: () => void) => void
+      onSelectSubInput: (callback: () => void) => void
       onUpdateSubInputPlaceholder?: (
         callback: (data: { pluginPath: string; placeholder: string }) => void
       ) => void
