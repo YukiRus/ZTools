@@ -1,6 +1,7 @@
 <template>
   <img
-    :src="src"
+    ref="imgRef"
+    :src="isVisible ? src : undefined"
     :class="['adaptive-icon', adaptiveClass]"
     :style="adaptiveStyle"
     v-bind="$attrs"
@@ -9,7 +10,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useColorScheme } from '../../composables/useColorScheme'
 
 const props = defineProps<{
@@ -31,6 +32,9 @@ const analysisResult = ref<{
 } | null>(null)
 
 const isAnalyzing = ref(false)
+const isVisible = ref(false)
+const imgRef = ref<HTMLImageElement>()
+let observer: IntersectionObserver | null = null
 
 // 分析图片
 async function analyzeImage(): Promise<void> {
@@ -85,20 +89,61 @@ function onError(event: Event): void {
   emit('error', event)
 }
 
-// 监听 src 变化，重新分析
+// 设置 IntersectionObserver 懒加载
+function setupObserver(): void {
+  cleanupObserver()
+
+  if (!imgRef.value) return
+
+  observer = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          isVisible.value = true
+          // 可见后触发图片分析
+          if (props.src) {
+            analyzeImage()
+          }
+          // 一旦可见就停止观察
+          observer?.disconnect()
+          observer = null
+          break
+        }
+      }
+    },
+    {
+      // 提前 200px 开始加载，提升滚动体验
+      rootMargin: '200px'
+    }
+  )
+
+  observer.observe(imgRef.value)
+}
+
+function cleanupObserver(): void {
+  if (observer) {
+    observer.disconnect()
+    observer = null
+  }
+}
+
+// 监听 src 变化，重新分析（仅在已可见时）
 watch(
   () => props.src,
   () => {
     analysisResult.value = null
-    analyzeImage()
-  },
-  { immediate: true }
+    if (isVisible.value && props.src) {
+      analyzeImage()
+    }
+  }
 )
 
 onMounted(() => {
-  if (props.src) {
-    analyzeImage()
-  }
+  setupObserver()
+})
+
+onBeforeUnmount(() => {
+  cleanupObserver()
 })
 </script>
 
