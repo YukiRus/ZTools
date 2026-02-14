@@ -3,4 +3,4 @@
 	url = https://github.com/ZToolsCenter/ztools-plugin-cli.git
 [submodule "ztools-api-types"]
 	path = ztools-api-types
-	url = https://github.com/ZToolsCenter/ztools-api-types.git
+	url = https://github.com/YukiRus/ztools-api-types.git

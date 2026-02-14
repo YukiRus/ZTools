@@ -179,8 +179,13 @@ export class AppsAPI {
             )
         )
 
-        if (hasOldFormat) {
-          console.log('检测到旧格式图标缓存，将重新扫描并更新为 ztools-icon 协议...')
+        // 检查是否包含新字段（targetPath、englishName、englishAcronym），如果没有则视为旧缓存
+        const hasNewFields = cachedApps.some(
+          (app) => app.targetPath !== undefined || app.englishName !== undefined || app.englishAcronym !== undefined
+        )
+
+        if (hasOldFormat || !hasNewFields) {
+          console.log('检测到旧格式缓存（缺少新字段或旧图标格式），将重新扫描并更新...')
         } else {
           console.log(`从缓存读取到 ${cachedApps.length} 个应用`)
           return cachedApps

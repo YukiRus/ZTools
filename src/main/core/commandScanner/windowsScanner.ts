@@ -259,8 +259,13 @@ async function scanDirectory(
 
       // 优先使用本地化显示名称，降级为磁盘文件名
       // 解决 Windows 系统快捷方式文件名为英文（如 File Explorer.lnk）但显示名为中文的问题
-      const appName =
-        displayNameMap.get(fullPath.toLowerCase()) || path.basename(entry.name, '.lnk')
+      const localizedName = displayNameMap.get(fullPath.toLowerCase())
+      const diskName = path.basename(entry.name, '.lnk')
+      const appName = localizedName || diskName
+      // 保留英文名用于搜索：优先使用磁盘文件名（英文），如果只有中文名则为空
+      const englishName = localizedName ? diskName : ''
+      // 英文名的首字母缩写（如 RDC = Remote Desktop Connection），用于搜索 "RDC" 匹配英文名
+      const englishAcronym = localizedName ? extractAcronym(diskName) : ''
 
       // 尝试解析快捷方式目标（必须先解析才能获取真实路径）
       let shortcutDetails: Electron.ShortcutDetails | null = null
@@ -305,12 +310,17 @@ async function scanDirectory(
       // 创建应用对象
       // _dedupeTarget 用于去重：同名且指向同一目标的快捷方式只保留一个
       // （用户开始菜单和系统开始菜单可能有同名同目标的 .lnk，路径不同但应合并）
-      const app: Command & { _dedupeTarget?: string } = {
+      // targetPath 用于搜索：让用户可以通过 exe 名称（如 cmd）搜索到中文命名的快捷方式
+      // englishName 用于搜索：保留英文名（如 Remote Desktop Connection），让用户可以搜索英文名
+      const app: Command & { _dedupeTarget?: string; targetPath?: string; englishName?: string; englishAcronym?: string } = {
         name: appName,
         path: fullPath,
         icon,
         acronym: extractAcronym(appName),
-        _dedupeTarget: targetPath || undefined
+        _dedupeTarget: targetPath || undefined,
+        targetPath: targetPath || undefined,
+        englishName: englishName || undefined,
+        englishAcronym: englishAcronym || undefined
       }
 
       apps.push(app)

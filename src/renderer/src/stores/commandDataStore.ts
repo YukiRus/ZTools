@@ -77,6 +77,9 @@ export interface Command {
   pinyin?: string
   pinyinAbbr?: string
   acronym?: string // 英文首字母缩写（用于搜索）
+  targetPath?: string // 快捷方式的目标路径（如 cmd.exe），用于搜索
+  englishName?: string // 快捷方式的英文名（如 Remote Desktop Connection），用于搜索
+  englishAcronym?: string // 英文名的首字母缩写（如 rdc），用于搜索
   type: CommandType // 指令类型
   subType?: CommandSubType // 子类型（用于区分 direct 类型）
   featureCode?: string // 插件功能代码（用于启动时指定功能）
@@ -153,9 +156,10 @@ export const useCommandDataStore = defineStore('commandData', () => {
   // 禁用指令列表
   const disabledCommands = ref<string[]>([])
   const DISABLED_COMMANDS_KEY = 'disable-commands'
-  // 搜索偏好记录（搜索词 -> 上次选中的指令标识）
+  // 搜索偏好记录（搜索词 -> 历史选中的指令列表，按使用顺序，最新在前，最多5个）
+  const MAX_HISTORY_PER_QUERY = 5
   const searchPreference = ref<
-    Record<string, { path: string; featureCode?: string; name: string }>
+    Record<string, { path: string; featureCode?: string; name: string }[]>
   >({})
 
   // 生成指令唯一标识（与设置插件保持一致）
@@ -198,7 +202,7 @@ export const useCommandDataStore = defineStore('commandData', () => {
     }
   }
 
-  // 保存搜索偏好（搜索词 -> 选中的指令）
+  // 保存搜索偏好（搜索词 -> 选中的指令，按使用顺序保存，最多5个）
   async function saveSearchPreference(
     query: string,
     command: { path: string; featureCode?: string; name: string }
@@ -206,11 +210,30 @@ export const useCommandDataStore = defineStore('commandData', () => {
     const key = query.trim().toLowerCase()
     if (!key) return
 
-    searchPreference.value[key] = {
+    const history = searchPreference.value[key] || []
+    const existingIndex = history.findIndex(
+      (item) =>
+        item.path === command.path &&
+        item.featureCode === command.featureCode &&
+        item.name === command.name
+    )
+
+    if (existingIndex !== -1) {
+      history.splice(existingIndex, 1)
+    }
+
+    history.unshift({
       path: command.path,
       featureCode: command.featureCode,
       name: command.name
+    })
+
+    if (history.length > MAX_HISTORY_PER_QUERY) {
+      history.pop()
     }
+
+    searchPreference.value[key] = history
+
     try {
       await window.ztools.dbPut(
         'search-preference',
@@ -570,7 +593,10 @@ export const useCommandDataStore = defineStore('commandData', () => {
           { name: 'name', weight: 2 }, // 名称权重最高
           { name: 'pinyin', weight: 1.5 }, // 拼音
           { name: 'pinyinAbbr', weight: 1 }, // 拼音首字母
-          { name: 'acronym', weight: 1.5 } // 英文首字母缩写
+          { name: 'acronym', weight: 1.5 }, // 英文首字母缩写
+          { name: 'targetPath', weight: 1.5 }, // 快捷方式目标路径（如 cmd.exe）
+          { name: 'englishName', weight: 1.5 }, // 快捷方式英文名（如 Remote Desktop Connection）
+          { name: 'englishAcronym', weight: 1.5 } // 英文名首字母缩写（如 rdc）
         ],
         threshold: 0, // 严格模式
         ignoreLocation: true,
@@ -623,7 +649,10 @@ export const useCommandDataStore = defineStore('commandData', () => {
               { name: 'name', weight: 2 },
               { name: 'pinyin', weight: 1.5 },
               { name: 'pinyinAbbr', weight: 1 },
-              { name: 'acronym', weight: 1.5 }
+              { name: 'acronym', weight: 1.5 },
+              { name: 'targetPath', weight: 1.5 },
+              { name: 'englishName', weight: 1.5 },
+              { name: 'englishAcronym', weight: 1.5 }
             ],
             threshold: 0,
             ignoreLocation: true,
@@ -664,18 +693,26 @@ export const useCommandDataStore = defineStore('commandData', () => {
           return scoreB - scoreA // 分数高的排前面
         })
 
-      // 搜索偏好置顶：将上次选中的指令移到第一位
+      // 搜索偏好置顶：按历史使用顺序排序（最新的在前）
       const prefKey = query.trim().toLowerCase()
-      const pref = searchPreference.value[prefKey]
-      if (pref) {
-        const prefIndex = bestMatches.findIndex(
-          (cmd) =>
-            cmd.path === pref.path && cmd.featureCode === pref.featureCode && cmd.name === pref.name
-        )
-        if (prefIndex > 0) {
-          const [preferred] = bestMatches.splice(prefIndex, 1)
-          bestMatches.unshift(preferred)
-        }
+      const prefHistory = searchPreference.value[prefKey]
+      if (prefHistory && prefHistory.length > 0) {
+        bestMatches.sort((a, b) => {
+          const indexA = prefHistory.findIndex(
+            (pref) =>
+              a.path === pref.path && a.featureCode === pref.featureCode && a.name === pref.name
+          )
+          const indexB = prefHistory.findIndex(
+            (pref) =>
+              b.path === pref.path && b.featureCode === pref.featureCode && b.name === pref.name
+          )
+          if (indexA !== -1 && indexB !== -1) {
+            return indexA - indexB
+          }
+          if (indexA !== -1) return -1
+          if (indexB !== -1) return 1
+          return 0
+        })
       }
     }
 
