@@ -50,6 +50,7 @@ interface GlobalShortcut {
 
 const props = defineProps<{
   editingShortcut?: GlobalShortcut | null
+  prefillTarget?: string
 }>()
 
 const emit = defineEmits<{
@@ -73,7 +74,7 @@ watch(
       targetCommand.value = newVal.target
     } else {
       recordedShortcut.value = ''
-      targetCommand.value = ''
+      targetCommand.value = props.prefillTarget || ''
     }
   },
   { immediate: true }

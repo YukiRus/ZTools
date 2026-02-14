@@ -29,13 +29,22 @@
       <DataManagement v-if="activeMenu === 'data'" :search-query="props.searchQuery" />
 
       <!-- 全局快捷键 -->
-      <GlobalShortcuts v-if="activeMenu === 'shortcuts'" :search-query="props.searchQuery" />
+      <GlobalShortcuts
+        v-if="activeMenu === 'shortcuts'"
+        :search-query="props.searchQuery"
+        :auto-add-target="shortcutAutoAddTarget"
+        @auto-add-consumed="shortcutAutoAddTarget = ''"
+      />
 
       <!-- WebDAV 同步 -->
       <SyncSettings v-if="activeMenu === 'sync'" />
 
       <!-- 所有指令 -->
-      <AllCommands v-if="activeMenu === 'all-commands'" :search-query="props.searchQuery" />
+      <AllCommands
+        v-if="activeMenu === 'all-commands'"
+        :search-query="props.searchQuery"
+        @navigate="handleNavigate"
+      />
 
       <!-- 本地启动 -->
       <LocalLaunch v-if="activeMenu === 'local-launch'" :search-query="props.searchQuery" />
@@ -47,7 +56,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import Icon from '../common/Icon.vue'
 import AiModels from './AiModels.vue'
 import AllCommands from './AllCommands.vue'
@@ -106,6 +115,17 @@ const activeMenu = computed({
   get: () => props.activePage,
   set: (value) => emit('update:activePage', value)
 })
+
+// 全局快捷键页面的预填目标指令（从 AllCommands 导航过来时使用）
+const shortcutAutoAddTarget = ref('')
+
+// 处理子组件导航请求
+function handleNavigate(page: string, params?: Record<string, string>): void {
+  if (page === 'shortcuts' && params?.targetCommand) {
+    shortcutAutoAddTarget.value = params.targetCommand
+  }
+  activeMenu.value = page
+}
 </script>
 
 <style scoped>

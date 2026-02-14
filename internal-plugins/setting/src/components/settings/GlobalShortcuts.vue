@@ -81,6 +81,7 @@
       <ShortcutEditor
         v-if="showEditor"
         :editing-shortcut="editingShortcut"
+        :prefill-target="prefillTarget"
         @back="closeEditor"
         @save="handleSave"
       />
@@ -89,7 +90,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useToast } from '../../composables/useToast'
 import { weightedSearch } from '../../utils/weightedSearch'
 import Icon from '../common/Icon.vue'
@@ -97,6 +98,11 @@ import ShortcutEditor from './ShortcutEditor.vue'
 
 const props = defineProps<{
   searchQuery?: string
+  autoAddTarget?: string
+}>()
+
+const emit = defineEmits<{
+  (e: 'autoAddConsumed'): void
 }>()
 
 const { success, error, warning, confirm } = useToast()
@@ -123,6 +129,21 @@ const filteredShortcuts = computed(() =>
 // 编辑器状态
 const showEditor = ref(false)
 const editingShortcut = ref<GlobalShortcut | null>(null) // 正在编辑的快捷键
+const prefillTarget = ref('') // 预填目标指令（从外部导航过来时）
+
+// 监听 autoAddTarget prop，自动打开添加编辑器并预填目标指令
+watch(
+  () => props.autoAddTarget,
+  (target) => {
+    if (target) {
+      prefillTarget.value = target
+      editingShortcut.value = null
+      showEditor.value = true
+      emit('autoAddConsumed')
+    }
+  },
+  { immediate: true }
+)
 
 // 加载快捷键列表
 async function loadShortcuts(): Promise<void> {
@@ -153,12 +174,14 @@ async function saveShortcuts(): Promise<void> {
 // 显示添加编辑器
 function showAddEditor(): void {
   editingShortcut.value = null
+  prefillTarget.value = ''
   showEditor.value = true
 }
 
 // 显示编辑编辑器
 function handleEdit(shortcut: GlobalShortcut): void {
   editingShortcut.value = shortcut
+  prefillTarget.value = ''
   showEditor.value = true
 }
 
@@ -166,6 +189,7 @@ function handleEdit(shortcut: GlobalShortcut): void {
 function closeEditor(): void {
   showEditor.value = false
   editingShortcut.value = null
+  prefillTarget.value = ''
 }
 
 // 保存快捷键（添加或编辑）

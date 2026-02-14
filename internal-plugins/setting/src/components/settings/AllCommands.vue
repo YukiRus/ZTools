@@ -236,6 +236,10 @@ const props = defineProps<{
   searchQuery?: string
 }>()
 
+const emit = defineEmits<{
+  (e: 'navigate', page: string, params?: Record<string, string>): void
+}>()
+
 // 定义 Command 类型（从 commandDataStore 复制）
 export type CommandType = 'direct' | 'plugin' | 'builtin'
 export type CommandSubType = 'app' | 'system-setting'
@@ -262,6 +266,7 @@ interface Source {
   type?: string
   subType?: string
   name: string
+  title?: string
   path?: string
   logo?: string
 }
@@ -446,6 +451,13 @@ function getMenuItems(
         label: pinned ? '取消固定超级面板' : '固定到超级面板',
         icon: 'pin'
       })
+
+      // 设置全局快捷键
+      items.push({
+        key: 'set-global-shortcut',
+        label: '设置全局快捷键',
+        icon: 'keyboard'
+      })
     }
   }
 
@@ -476,6 +488,10 @@ async function handleMenuSelect(
   } else if (key === 'pin-super-panel') {
     // 固定/取消固定到超级面板
     await toggleSuperPanelPin(pluginName, featureCode, cmdName)
+  } else if (key === 'set-global-shortcut') {
+    // 跳转到全局快捷键页面并打开添加面板，预填目标指令（插件标题/指令名称）
+    const pluginTitle = selectedSource.value?.title || pluginName
+    emit('navigate', 'shortcuts', { targetCommand: `${pluginTitle}/${cmdName}` })
   }
 }
 
