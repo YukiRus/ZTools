@@ -67,7 +67,7 @@
           </div>
 
           <!-- 空状态 -->
-          <div v-if="shortcuts.length === 0" class="empty-state">
+          <div v-if="!loading && shortcuts.length === 0" class="empty-state">
             <Icon name="keyboard" :size="64" class="empty-icon" />
             <div class="empty-text">暂无全局快捷键</div>
             <div class="empty-hint">点击"添加快捷键"来创建你的第一个全局快捷键</div>
@@ -111,6 +111,7 @@ interface GlobalShortcut {
 // 快捷键列表
 const shortcuts = ref<GlobalShortcut[]>([])
 const isDeleting = ref(false)
+const loading = ref(true)
 
 const filteredShortcuts = computed(() =>
   weightedSearch(shortcuts.value, props.searchQuery || '', [
@@ -131,6 +132,8 @@ async function loadShortcuts(): Promise<void> {
     console.log('加载全局快捷键:', shortcuts.value)
   } catch (error) {
     console.error('加载全局快捷键失败:', error)
+  } finally {
+    loading.value = false
   }
 }
 

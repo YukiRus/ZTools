@@ -83,7 +83,7 @@
           </div>
 
           <!-- 空状态 -->
-          <div v-if="models.length === 0" class="empty-state">
+          <div v-if="!loading && models.length === 0" class="empty-state">
             <Icon name="brain" :size="64" class="empty-icon" />
             <div class="empty-text">暂无 AI 模型</div>
             <div class="empty-hint">点击"添加模型"来配置你的第一个 AI 模型</div>
@@ -130,6 +130,7 @@ interface AiModel {
 // 模型列表
 const models = ref<AiModel[]>([])
 const isDeleting = ref(false)
+const loading = ref(true)
 
 const filteredModels = computed(() =>
   weightedSearch(models.value, props.searchQuery || '', [
@@ -153,6 +154,8 @@ async function loadModels(): Promise<void> {
   } catch (err) {
     console.error('加载 AI 模型列表失败:', err)
     error('加载模型列表失败')
+  } finally {
+    loading.value = false
   }
 }
 

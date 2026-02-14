@@ -1,13 +1,7 @@
 <template>
   <div class="content-panel">
-    <!-- 加载状态 -->
-    <div v-if="loading" class="loading-overlay">
-      <div class="loading-spinner"></div>
-      <span class="loading-text">加载中...</span>
-    </div>
-
     <!-- 拖拽蒙层 -->
-    <div v-if="!loading && isDragging" class="drag-overlay">
+    <div v-if="isDragging" class="drag-overlay">
       <div class="drag-overlay-content">
         <svg
           class="drag-icon"
@@ -30,7 +24,7 @@
     </div>
 
     <div
-      v-show="!loading"
+      v-show="true"
       class="scrollable-content"
       @dragover.prevent="handleDragOver"
       @dragleave="handleDragLeave"
@@ -48,7 +42,7 @@
       </div>
 
       <!-- 空状态提示 -->
-      <div v-if="shortcuts.length === 0" class="empty-state">
+      <div v-if="!loading && shortcuts.length === 0" class="empty-state">
         <svg
           class="empty-icon"
           xmlns="http://www.w3.org/2000/svg"
@@ -247,6 +241,8 @@ async function loadShortcuts(): Promise<void> {
   } catch (err) {
     console.error('加载本地启动项失败:', err)
     error('加载失败')
+  } finally {
+    loading.value = false
   }
 }
 
@@ -432,48 +428,12 @@ function getTypeLabel(type: string): string {
 }
 
 // 组件挂载时加载数据
-onMounted(async () => {
-  loading.value = true
-  try {
-    await loadShortcuts()
-  } finally {
-    loading.value = false
-  }
+onMounted(() => {
+  loadShortcuts()
 })
 </script>
 
 <style scoped>
-/* === 加载状态 === */
-.loading-overlay {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  gap: 12px;
-}
-
-.loading-spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid var(--divider-color);
-  border-top-color: var(--primary-color);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.loading-text {
-  font-size: 13px;
-  color: var(--text-color-secondary);
-}
-
 .content-panel {
   position: relative; /* 重要：为 absolute 定位的子元素提供定位上下文 */
   height: 100%;
