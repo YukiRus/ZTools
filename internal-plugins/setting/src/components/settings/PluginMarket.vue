@@ -7,6 +7,13 @@
           <div class="loading-spinner"></div>
           <span>加载中...</span>
         </div>
+        <div v-else-if="filteredPlugins.length === 0" class="empty-state">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" />
+            <path d="M16 16L20 20" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+          <span>未找到匹配的插件</span>
+        </div>
         <div v-else class="market-grid">
           <div
             v-for="plugin in filteredPlugins"
@@ -561,6 +568,25 @@ onUnmounted(() => {
 .loading-state span {
   font-size: 13px;
   color: var(--text-color-secondary);
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  gap: 12px;
+  color: var(--text-secondary);
+}
+
+.empty-state svg {
+  opacity: 0.4;
+}
+
+.empty-state span {
+  font-size: 13px;
 }
 
 @keyframes spin {
