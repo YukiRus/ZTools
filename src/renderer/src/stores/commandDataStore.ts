@@ -153,6 +153,10 @@ export const useCommandDataStore = defineStore('commandData', () => {
   // 禁用指令列表
   const disabledCommands = ref<string[]>([])
   const DISABLED_COMMANDS_KEY = 'disable-commands'
+  // 搜索偏好记录（搜索词 -> 上次选中的指令标识）
+  const searchPreference = ref<
+    Record<string, { path: string; featureCode?: string; name: string }>
+  >({})
 
   // 生成指令唯一标识（与设置插件保持一致）
   // 格式: pluginName:featureCode:cmdName:cmdType
@@ -182,6 +186,41 @@ export const useCommandDataStore = defineStore('commandData', () => {
     }
   }
 
+  // 加载搜索偏好记录
+  async function loadSearchPreference(): Promise<void> {
+    try {
+      const data = await window.ztools.dbGet('search-preference')
+      if (data && typeof data === 'object') {
+        searchPreference.value = data
+      }
+    } catch (error) {
+      console.error('加载搜索偏好记录失败:', error)
+    }
+  }
+
+  // 保存搜索偏好（搜索词 -> 选中的指令）
+  async function saveSearchPreference(
+    query: string,
+    command: { path: string; featureCode?: string; name: string }
+  ): Promise<void> {
+    const key = query.trim().toLowerCase()
+    if (!key) return
+
+    searchPreference.value[key] = {
+      path: command.path,
+      featureCode: command.featureCode,
+      name: command.name
+    }
+    try {
+      await window.ztools.dbPut(
+        'search-preference',
+        JSON.parse(JSON.stringify(searchPreference.value))
+      )
+    } catch (error) {
+      console.error('保存搜索偏好失败:', error)
+    }
+  }
+
   // 从数据库加载所有数据（仅在初始化时调用一次）
   async function initializeData(): Promise<void> {
     if (isInitialized.value) {
@@ -192,7 +231,7 @@ export const useCommandDataStore = defineStore('commandData', () => {
       // 先加载禁用指令列表和指令列表，再加载历史记录和固定列表（历史记录清理需要依赖指令列表）
       await loadDisabledCommands()
       await loadCommands()
-      await Promise.all([loadHistoryData(), loadPinnedData()])
+      await Promise.all([loadHistoryData(), loadPinnedData(), loadSearchPreference()])
 
       // 监听后端历史记录变化事件
       window.ztools.onHistoryChanged(() => {
@@ -624,6 +663,20 @@ export const useCommandDataStore = defineStore('commandData', () => {
           const scoreB = calculateMatchScore(b.name, query, b.matches)
           return scoreB - scoreA // 分数高的排前面
         })
+
+      // 搜索偏好置顶：将上次选中的指令移到第一位
+      const prefKey = query.trim().toLowerCase()
+      const pref = searchPreference.value[prefKey]
+      if (pref) {
+        const prefIndex = bestMatches.findIndex(
+          (cmd) =>
+            cmd.path === pref.path && cmd.featureCode === pref.featureCode && cmd.name === pref.name
+        )
+        if (prefIndex > 0) {
+          const [preferred] = bestMatches.splice(prefIndex, 1)
+          bestMatches.unshift(preferred)
+        }
+      }
     }
 
     // 2. 匹配指令匹配（从 regexCommands 中查找，包括 regex 和 over 类型）
@@ -1048,6 +1101,9 @@ export const useCommandDataStore = defineStore('commandData', () => {
     unpinCommand,
     getPinnedCommands,
     updatePinnedOrder,
-    clearPinned
+    clearPinned,
+
+    // 搜索偏好
+    saveSearchPreference
   }
 })

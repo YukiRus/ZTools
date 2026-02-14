@@ -100,7 +100,8 @@ const {
   unpinCommand,
   isPinned,
   getPinnedCommands,
-  updatePinnedOrder
+  updatePinnedOrder,
+  saveSearchPreference
 } = commandDataStore
 
 // 使用搜索结果 composable
@@ -506,6 +507,11 @@ async function handleSelectApp(app: any): Promise<void> {
         emit('restore-match', state)
       }
       return
+    }
+
+    // 记录搜索偏好（仅普通文本搜索时，排除匹配指令类型）
+    if (props.searchQuery.trim() && (!app.cmdType || app.cmdType === 'text')) {
+      saveSearchPreference(props.searchQuery, app)
     }
 
     // 构造 payload 和 type
