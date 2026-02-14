@@ -530,11 +530,20 @@ export class PluginsAPI {
   // 获取插件市场列表
   private async fetchPluginMarket(): Promise<any> {
     try {
-      // 从 OSS 获取 plugins.json
-      const pluginsJsonUrl = 'https://ztools-center.oss-cn-beijing.aliyuncs.com/plugins.json'
-      const latestVersionUrl = 'https://ztools-center.oss-cn-beijing.aliyuncs.com/latest'
+      // 读取设置，检查是否有自定义插件市场 URL
+      const settings = await databaseAPI.dbGet('settings-general')
+      const defaultBaseUrl = 'https://ztools-center.oss-cn-beijing.aliyuncs.com'
+      let baseUrl = defaultBaseUrl
 
-      console.log('从 OSS 获取插件市场列表...')
+      if (settings?.pluginMarketCustom && settings?.pluginMarketUrl) {
+        baseUrl = settings.pluginMarketUrl.replace(/\/+$/, '') // 去除末尾斜杠
+      }
+
+      // 从 OSS 获取 plugins.json
+      const pluginsJsonUrl = `${baseUrl}/plugins.json`
+      const latestVersionUrl = `${baseUrl}/latest`
+
+      console.log('从插件市场获取列表...', baseUrl)
 
       // 生成时间戳，用于禁用缓存
       const timestamp = Date.now()
