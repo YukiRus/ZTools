@@ -51,6 +51,9 @@
 
       <!-- AI 模型管理 -->
       <AiModels v-if="activeMenu === 'ai-models'" :search-query="props.searchQuery" />
+
+      <!-- 关于 -->
+      <AboutPage v-if="activeMenu === 'about'" />
     </div>
   </div>
 </template>
@@ -67,6 +70,7 @@ import LocalLaunch from './LocalLaunch.vue'
 import PluginCenter from './PluginCenter.vue'
 import PluginMarket from './PluginMarket.vue'
 import SyncSettings from './SyncSettings.vue'
+import AboutPage from './AboutPage.vue'
 
 // Props
 interface Props {
@@ -94,6 +98,7 @@ interface MenuItem {
     | 'cloud'
     | 'folder'
     | 'brain'
+    | 'info'
   label: string
 }
 
@@ -107,7 +112,8 @@ const menuItems: MenuItem[] = [
   { id: 'data', icon: 'database', label: '我的数据' },
   { id: 'all-commands', icon: 'list', label: '所有指令' },
   { id: 'local-launch', icon: 'folder', label: '本地启动' },
-  { id: 'sync', icon: 'cloud', label: 'WebDAV 同步' }
+  { id: 'sync', icon: 'cloud', label: 'WebDAV 同步' },
+  { id: 'about', icon: 'info', label: '关于' }
 ]
 
 // 使用 computed 实现双向绑定
