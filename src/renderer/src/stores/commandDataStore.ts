@@ -327,8 +327,10 @@ export const useCommandDataStore = defineStore('commandData', () => {
   async function loadCommands(): Promise<void> {
     loading.value = true
     try {
-      const rawApps = await window.ztools.getApps()
-      const plugins = await window.ztools.getAllPlugins() // 使用 getAllPlugins 获取所有插件（包括 system）
+      const [rawApps, plugins] = await Promise.all([
+        window.ztools.getApps(),
+        window.ztools.getAllPlugins() // 使用 getAllPlugins 获取所有插件（包括 system）
+      ])
 
       // 处理本地应用指令
       const appItems = rawApps.map((app) => {
